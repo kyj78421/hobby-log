@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { getEmotion } from "@/lib/emotions";
 import { formatDate, type ActivityListItem } from "@/lib/activities";
 
 export function ActivityCard({ activity }: { activity: ActivityListItem }) {
+  const emotion = getEmotion(activity.emotion);
   return (
     <Link
       href={`/activities/${activity.id}`}
@@ -14,6 +16,25 @@ export function ActivityCard({ activity }: { activity: ActivityListItem }) {
         {activity.title}
       </h3>
       <p className="mt-2 text-sm text-warmNeutral-500">{formatDate(activity.activity_date)}</p>
+      {(emotion || activity.satisfaction) && (
+        <p className="mt-3 flex items-center gap-3 text-sm text-warmNeutral-700">
+          {emotion && (
+            <span>
+              <span aria-hidden>{emotion.emoji}</span> {emotion.label}
+            </span>
+          )}
+          {activity.satisfaction && (
+            <span aria-label={`5점 만점에 ${activity.satisfaction}점`}>
+              <span aria-hidden className="text-accent-star">
+                {"★".repeat(activity.satisfaction)}
+              </span>
+              <span aria-hidden className="text-warmNeutral-300">
+                {"★".repeat(5 - activity.satisfaction)}
+              </span>
+            </span>
+          )}
+        </p>
+      )}
     </Link>
   );
 }

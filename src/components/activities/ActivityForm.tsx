@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 import type { ActivityFormState } from "@/app/activities/actions";
 import type { Category } from "@/lib/activities";
 import { FormError, SubmitButton } from "@/components/auth/fields";
+import { EMOTIONS } from "@/lib/emotions";
 
 type Initial = {
   id?: string;
@@ -12,6 +13,8 @@ type Initial = {
   hobby_id: string;
   title: string;
   content: string;
+  emotion: string;
+  satisfaction: string;
 };
 
 const controlClass =
@@ -68,6 +71,8 @@ export function ActivityForm({
   const [hobbyId, setHobbyId] = useState(initial.hobby_id);
   const [title, setTitle] = useState(initial.title);
   const [content, setContent] = useState(initial.content);
+  const [emotion, setEmotion] = useState(initial.emotion);
+  const [satisfaction, setSatisfaction] = useState(initial.satisfaction);
 
   const errors = state.fieldErrors ?? {};
   const hobbies = categories.find((c) => String(c.id) === categoryId)?.hobbies ?? [];
@@ -161,6 +166,63 @@ export function ActivityForm({
           className={`w-full rounded-[12px] border bg-warmNeutral-0 px-4 py-3 text-base leading-relaxed text-warmNeutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200 aria-[invalid=true]:border-error ${border("content")}`}
         />
       </Field>
+
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium text-warmNeutral-900">
+          오늘의 감정 <span className="text-warmNeutral-500">(선택)</span>
+        </legend>
+        <input type="hidden" name="emotion" value={emotion} />
+        <div className="grid grid-cols-4 gap-2">
+          {EMOTIONS.map((e) => {
+            const selected = emotion === e.key;
+            return (
+              <button
+                key={e.key}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => setEmotion(selected ? "" : e.key)}
+                className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-[12px] border px-1 py-2 text-xs font-medium ${
+                  selected
+                    ? "border-primary-500 bg-primary-200 text-primary-900 ring-2 ring-primary-300"
+                    : "border-warmNeutral-200 bg-warmNeutral-0 text-warmNeutral-700 hover:bg-warmNeutral-100"
+                }`}
+              >
+                <span className="text-2xl" aria-hidden>
+                  {e.emoji}
+                </span>
+                {e.label}
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium text-warmNeutral-900">
+          만족도 <span className="text-warmNeutral-500">(선택)</span>
+        </legend>
+        <input type="hidden" name="satisfaction" value={satisfaction} />
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((n) => {
+            const filled = Number(satisfaction) >= n;
+            return (
+              <button
+                key={n}
+                type="button"
+                aria-label={`5점 만점에 ${n}점`}
+                aria-pressed={satisfaction === String(n)}
+                onClick={() => setSatisfaction(satisfaction === String(n) ? "" : String(n))}
+                className={`h-12 w-12 text-3xl ${filled ? "text-accent-star" : "text-warmNeutral-300"}`}
+              >
+                ★
+              </button>
+            );
+          })}
+          <span className="ml-2 text-sm text-warmNeutral-500">
+            {satisfaction ? `${satisfaction}점` : "선택 안 함"}
+          </span>
+        </div>
+      </fieldset>
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Link

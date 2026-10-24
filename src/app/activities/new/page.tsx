@@ -24,7 +24,7 @@ async function NewForm() {
     <ActivityForm
       action={createActivity}
       categories={categories}
-      initial={{ activity_date: todayInSeoul(), hobby_id: "", title: "", content: "" }}
+      initial={{ activity_date: todayInSeoul(), hobby_id: "", title: "", content: "", emotion: "", satisfaction: "" }}
       submitLabel="저장"
       pendingLabel="저장 중…"
       cancelHref="/activities"

@@ -7,6 +7,8 @@ export type ActivityListItem = {
   id: string;
   title: string;
   activity_date: string;
+  emotion: string | null;
+  satisfaction: number | null;
   hobby: { id: number; name: string; category: { id: number; name: string } };
 };
 
@@ -16,7 +18,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 export const isUuid = (value: string) => UUID_PATTERN.test(value);
 
 const LIST_COLUMNS =
-  "id, title, activity_date, hobby:hobbies!inner(id, name, category:hobby_categories!inner(id, name))";
+  "id, title, activity_date, emotion, satisfaction, hobby:hobbies!inner(id, name, category:hobby_categories!inner(id, name))";
 
 export async function getCategories(): Promise<Category[]> {
   const supabase = await createClient();

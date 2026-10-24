@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { isUuid } from "@/lib/activities";
+import { EMOTIONS } from "@/lib/emotions";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActivityFormState = {
@@ -12,9 +13,14 @@ export type ActivityFormState = {
     hobby_id: string;
     title: string;
     content: string;
+    emotion: string;
+    satisfaction: string;
   };
   fieldErrors?: Partial<
-    Record<"activity_date" | "category_id" | "hobby_id" | "title" | "content", string>
+    Record<
+      "activity_date" | "category_id" | "hobby_id" | "title" | "content" | "emotion" | "satisfaction",
+      string
+    >
   >;
   error?: string;
 };
@@ -28,6 +34,8 @@ function parse(formData: FormData) {
     hobby_id: String(formData.get("hobby_id") ?? ""),
     title: String(formData.get("title") ?? ""),
     content: String(formData.get("content") ?? ""),
+    emotion: String(formData.get("emotion") ?? ""),
+    satisfaction: String(formData.get("satisfaction") ?? ""),
   };
   const fieldErrors: NonNullable<ActivityFormState["fieldErrors"]> = {};
   const date = new Date(`${values.activity_date}T00:00:00Z`);
@@ -40,6 +48,10 @@ function parse(formData: FormData) {
   if (!values.title.trim()) fieldErrors.title = "제목을 입력해 주세요.";
   else if (values.title.trim().length > 100) fieldErrors.title = "제목은 100자 이내로 입력해 주세요.";
   if (!values.content.trim()) fieldErrors.content = "활동 내용을 입력해 주세요.";
+  if (values.emotion && !EMOTIONS.some((e) => e.key === values.emotion))
+    fieldErrors.emotion = "감정을 다시 선택해 주세요.";
+  if (values.satisfaction && !/^[1-5]$/.test(values.satisfaction))
+    fieldErrors.satisfaction = "만족도는 1~5점 중에서 선택해 주세요.";
   return { values, fieldErrors };
 }
 
@@ -48,6 +60,8 @@ const row = (v: NonNullable<ActivityFormState["values"]>) => ({
   hobby_id: Number(v.hobby_id),
   title: v.title.trim(),
   content: v.content.trim(),
+  emotion: v.emotion || null,
+  satisfaction: v.satisfaction ? Number(v.satisfaction) : null,
 });
 
 export async function createActivity(

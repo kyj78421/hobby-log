@@ -35,6 +35,8 @@ async function EditForm({ params }: { params: Promise<{ id: string }> }) {
         hobby_id: String(activity.hobby.id),
         title: activity.title,
         content: activity.content,
+        emotion: activity.emotion ?? "",
+        satisfaction: activity.satisfaction ? String(activity.satisfaction) : "",
       }}
       submitLabel="저장"
       pendingLabel="저장 중…"

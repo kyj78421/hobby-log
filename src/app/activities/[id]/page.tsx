@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { DeleteButton } from "@/components/activities/DeleteButton";
+import { getEmotion } from "@/lib/emotions";
 import { formatDate, getActivity } from "@/lib/activities";
 import { requireUser } from "@/lib/auth";
 
@@ -29,6 +30,7 @@ async function Detail({ params, searchParams }: Props) {
 
   const activity = await getActivity(id);
   if (!activity) notFound();
+  const emotion = getEmotion(activity.emotion);
 
   return (
     <article>
@@ -47,6 +49,28 @@ async function Detail({ params, searchParams }: Props) {
         {activity.title}
       </h1>
       <p className="mt-2 text-warmNeutral-500">{formatDate(activity.activity_date)}</p>
+      {(emotion || activity.satisfaction) && (
+        <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-3 rounded-[20px] bg-primary-50 px-5 py-4">
+          {emotion && (
+            <div>
+              <dt className="text-xs font-medium text-warmNeutral-500">감정</dt>
+              <dd className="mt-1 text-warmNeutral-900">
+                <span aria-hidden className="text-xl">{emotion.emoji}</span> {emotion.label}
+              </dd>
+            </div>
+          )}
+          {activity.satisfaction && (
+            <div>
+              <dt className="text-xs font-medium text-warmNeutral-500">만족도</dt>
+              <dd className="mt-1 text-warmNeutral-900" aria-label={`5점 만점에 ${activity.satisfaction}점`}>
+                <span aria-hidden className="text-xl text-accent-star">{"★".repeat(activity.satisfaction)}</span>
+                <span aria-hidden className="text-xl text-warmNeutral-300">{"★".repeat(5 - activity.satisfaction)}</span>{" "}
+                {activity.satisfaction}점
+              </dd>
+            </div>
+          )}
+        </dl>
+      )}
       <p className="mt-8 whitespace-pre-wrap text-[17px] leading-[1.7] text-warmNeutral-900">
         {activity.content}
       </p>
