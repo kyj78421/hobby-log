@@ -43,6 +43,16 @@ try {
   check("B는 A 사진 삭제 불가(객체 유지)", (await (await fetch(`${URL_}/storage/v1/object/activity-photos`, { method: "DELETE", headers: { apikey: KEY, Authorization: `Bearer ${tb}`, "Content-Type": "application/json" }, body: JSON.stringify({ prefixes: [`${uidA}/t1.png`] }) })).json()).length === 0);
   check("남의 폴더 경로를 photo_path로 저장 불가", (await rest("activities", tb, { method: "POST", body: JSON.stringify({ hobby_id: hid, activity_date: "2026-10-24", title: "t", content: "x", photo_path: `${uidA}/t1.png` }) })).status >= 400);
   check("A는 본인 사진 삭제", (await (await fetch(`${URL_}/storage/v1/object/activity-photos`, { method: "DELETE", headers: { apikey: KEY, Authorization: `Bearer ${ta}`, "Content-Type": "application/json" }, body: JSON.stringify({ prefixes: [`${uidA}/t1.png`] }) })).json()).length === 1);
+  // 관심 취미
+  const rpc = (token, ids) => fetch(`${URL_}/rest/v1/rpc/set_my_hobbies`, { method: "POST", headers: { apikey: KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ hobby_ids: ids }) });
+  check("A 관심 취미 저장(rpc)", (await rpc(ta, [1, 2, 3])).status === 204);
+  check("A는 본인 관심 취미 3개 조회", (await rest("user_hobbies?select=hobby_id", ta)).body.length === 3);
+  check("B는 A 관심 취미 조회 불가", (await rest("user_hobbies?select=hobby_id", tb)).body.length === 0);
+  check("B의 저장이 A 데이터를 건드리지 않음", (await rpc(tb, [5])).status === 204 && (await rest("user_hobbies?select=hobby_id", ta)).body.length === 3);
+  check("A 관심 취미 교체(1개로)", (await rpc(ta, [4])).status === 204 && (await rest("user_hobbies?select=hobby_id", ta)).body.length === 1);
+  check("존재하지 않는 취미 id 거부", (await rpc(ta, [9999])).status >= 400 && (await rest("user_hobbies?select=hobby_id", ta)).body.length === 1);
+  check("비로그인은 rpc 실행 불가", (await rpc(KEY, [1])).status >= 400);
+  check("A 관심 취미 비우기", (await rpc(ta, [])).status === 204 && (await rest("user_hobbies?select=hobby_id", ta)).body.length === 0);
   check("비로그인은 기록 조회 불가", ((await rest("activities?select=id")).body ?? []).length === 0);
 } finally {
   await deleteTestUsers();

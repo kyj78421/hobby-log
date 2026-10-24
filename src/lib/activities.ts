@@ -133,3 +133,11 @@ export const isDateString = (value: unknown): value is string =>
   /^\d{4}-\d{2}-\d{2}$/.test(value) &&
   !Number.isNaN(new Date(`${value}T00:00:00Z`).getTime()) &&
   new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+
+// 관심 취미(내 것): 세부 취미 id 목록
+export async function getMyHobbyIds(): Promise<number[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("user_hobbies").select("hobby_id");
+  if (error) throw new Error("관심 취미를 불러오지 못했어요.");
+  return (data ?? []).map((r) => r.hobby_id as number);
+}

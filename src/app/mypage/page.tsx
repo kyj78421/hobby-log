@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { logout } from "@/app/(auth)/actions";
-import { countActivities } from "@/lib/activities";
+import Link from "next/link";
+import { countActivities, getCategories, getMyHobbyIds } from "@/lib/activities";
 import { requireUser } from "@/lib/auth";
 
 export const metadata = { title: "마이페이지 · HOBBY LOG" };
@@ -18,6 +19,13 @@ export default function MyPage() {
 
 async function Profile() {
   const user = await requireUser("/mypage");
+  let hobbyNames: string[] | null = [];
+  try {
+    const [ids, categories] = await Promise.all([getMyHobbyIds(), getCategories()]);
+    hobbyNames = categories.flatMap((c) => c.hobbies).filter((h) => ids.includes(h.id)).map((h) => h.name);
+  } catch {
+    hobbyNames = null;
+  }
   let total: number | null = null;
   try {
     total = await countActivities();
@@ -39,7 +47,22 @@ async function Profile() {
       </section>
       <section className="rounded-[20px] border border-warmNeutral-200 bg-warmNeutral-0 p-6">
         <h2 className="text-sm font-medium text-warmNeutral-500">관심 취미</h2>
-        <p className="mt-1 text-warmNeutral-700">아직 설정하지 않았어요.</p>
+        {hobbyNames === null ? (
+          <p className="mt-1 text-warmNeutral-700">관심 취미를 불러오지 못했어요.</p>
+        ) : hobbyNames.length === 0 ? (
+          <p className="mt-1 text-warmNeutral-700">아직 설정하지 않았어요.</p>
+        ) : (
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {hobbyNames.map((n) => (
+              <li key={n} className="rounded-full bg-primary-100 px-3 py-1 text-sm text-primary-800">
+                {n}
+              </li>
+            ))}
+          </ul>
+        )}
+        <Link href="/onboarding" className="mt-4 inline-block text-sm font-semibold text-primary-700 underline">
+          관심 취미 {hobbyNames && hobbyNames.length > 0 ? "변경" : "설정"}
+        </Link>
       </section>
       <form action={logout}>
         <button
