@@ -1,0 +1,40 @@
+import { sql, randPw, createTestUser, deleteTestUsers, signIn, rest } from "./lib.mjs";
+let fail = 0;
+const check = (name, ok, extra = "") => { console.log(ok ? "PASS" : "FAIL", name, ok ? "" : extra); if (!ok) fail++; };
+await deleteTestUsers();
+const pa = randPw(), pb = randPw();
+try {
+  await createTestUser("hl-test-a@example.com", pa);
+  await createTestUser("hl-test-b@example.com", pb);
+  const a = await signIn("hl-test-a@example.com", pa), b = await signIn("hl-test-b@example.com", pb);
+  check("테스트 계정 A 로그인", a.status === 200 && !!a.body.access_token, a.status);
+  check("테스트 계정 B 로그인", b.status === 200 && !!b.body.access_token);
+  check("잘못된 비밀번호 거부", (await signIn("hl-test-a@example.com", "wrong-password-1")).status === 400);
+  const ta = a.body.access_token, tb = b.body.access_token;
+  const hob = await rest("hobbies?select=id,name&limit=1", ta);
+  check("회원은 세부 취미 조회 가능", hob.status === 200 && hob.body.length === 1);
+  check("비로그인은 세부 취미 조회 불가(빈 결과/거부)", (await rest("hobbies?select=id")).body?.length !== 33 );
+  const hid = hob.body[0].id;
+  const ins = await rest("activities", ta, { method: "POST", body: JSON.stringify({ hobby_id: hid, activity_date: "2026-10-24", title: "A의 기록", content: "내용" }) });
+  check("A 기록 작성(user_id 자동 지정)", ins.status === 201 && !!ins.body[0]?.user_id, JSON.stringify(ins.body));
+  const rid = ins.body[0].id;
+  check("A는 자기 기록 조회", (await rest("activities?select=id", ta)).body.length === 1);
+  check("B는 A의 기록 조회 불가", (await rest("activities?select=id", tb)).body.length === 0);
+  check("B는 ID로도 A의 기록 조회 불가", (await rest(`activities?id=eq.${rid}&select=id`, tb)).body.length === 0);
+  const upd = await rest(`activities?id=eq.${rid}`, tb, { method: "PATCH", body: JSON.stringify({ title: "탈취" }) });
+  check("B는 A의 기록 수정 불가", Array.isArray(upd.body) && upd.body.length === 0);
+  const del = await rest(`activities?id=eq.${rid}`, tb, { method: "DELETE" });
+  check("B는 A의 기록 삭제 불가", Array.isArray(del.body) && del.body.length === 0);
+  const spoof = await rest("activities", tb, { method: "POST", body: JSON.stringify({ user_id: (await rest("activities?select=user_id", ta)).body[0].user_id, hobby_id: hid, activity_date: "2026-10-24", title: "사칭", content: "x" }) });
+  check("B는 A 명의로 기록 작성 불가", spoof.status >= 400, spoof.status);
+  check("빈 제목 거부(DB 제약)", (await rest("activities", ta, { method: "POST", body: JSON.stringify({ hobby_id: hid, activity_date: "2026-10-24", title: "   ", content: "x" }) })).status >= 400);
+  check("만족도 범위(1~5) 제약", (await rest("activities", ta, { method: "POST", body: JSON.stringify({ hobby_id: hid, activity_date: "2026-10-24", title: "t", content: "x", satisfaction: 9 }) })).status >= 400);
+  check("A 기록은 A가 삭제 가능", (await rest(`activities?id=eq.${rid}`, ta, { method: "DELETE" })).body.length === 1);
+  check("비로그인은 기록 조회 불가", ((await rest("activities?select=id")).body ?? []).length === 0);
+} finally {
+  await deleteTestUsers();
+  const left = await sql("select (select count(*) from auth.users) u, (select count(*) from public.activities) a");
+  console.log("정리 후:", JSON.stringify(left));
+}
+console.log(fail === 0 ? "ALL PASS" : `${fail} FAILED`);
+process.exit(fail ? 1 : 0);
