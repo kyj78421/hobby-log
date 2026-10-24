@@ -1,7 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 
 export async function createClient() {
+  // Supabase 클라이언트는 만료 판단에 Date.now()를 쓴다. 요청 시점에만 실행되도록 프리렌더에서 제외한다.
+  await connection();
   const cookieStore = await cookies();
 
   return createServerClient(

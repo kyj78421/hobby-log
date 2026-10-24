@@ -1,0 +1,33 @@
+import { Suspense } from "react";
+import { createActivity } from "@/app/activities/actions";
+import { ActivityForm } from "@/components/activities/ActivityForm";
+import { getCategories, todayInSeoul } from "@/lib/activities";
+import { requireUser } from "@/lib/auth";
+
+export const metadata = { title: "기록하기 · HOBBY LOG" };
+
+export default function NewActivityPage() {
+  return (
+    <main className="mx-auto w-full max-w-[760px] flex-1 px-5 py-10">
+      <h1 className="mb-8 text-[30px] font-bold text-primary-900 sm:text-4xl">기록하기</h1>
+      <Suspense fallback={<div className="h-96" aria-busy="true" />}>
+        <NewForm />
+      </Suspense>
+    </main>
+  );
+}
+
+async function NewForm() {
+  await requireUser("/activities/new");
+  const categories = await getCategories();
+  return (
+    <ActivityForm
+      action={createActivity}
+      categories={categories}
+      initial={{ activity_date: todayInSeoul(), hobby_id: "", title: "", content: "" }}
+      submitLabel="저장"
+      pendingLabel="저장 중…"
+      cancelHref="/activities"
+    />
+  );
+}

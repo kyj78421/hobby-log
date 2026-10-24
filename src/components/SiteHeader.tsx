@@ -35,13 +35,21 @@ async function AuthNav() {
   }
 
   return (
-    <form action={logout}>
-      <button
-        type="submit"
-        className="rounded-[14px] border border-primary-300 px-4 py-2.5 text-[15px] font-semibold text-primary-700 hover:bg-primary-50"
-      >
-        로그아웃
-      </button>
-    </form>
+    <nav className="flex items-center gap-1 text-[15px] font-semibold sm:gap-2">
+      <Link href="/activities" className="rounded-[14px] px-3 py-2.5 text-primary-700 hover:bg-primary-50">
+        아카이브
+      </Link>
+      <Link href="/activities/new" className="rounded-[14px] bg-primary-700 px-3 py-2.5 text-white hover:bg-primary-600 sm:px-4">
+        기록하기
+      </Link>
+      <form action={logout}>
+        <button
+          type="submit"
+          className="rounded-[14px] border border-primary-300 px-3 py-2.5 text-primary-700 hover:bg-primary-50 sm:px-4"
+        >
+          로그아웃
+        </button>
+      </form>
+    </nav>
   );
 }

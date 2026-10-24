@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 // 서버에서 Supabase에 토큰을 확인해 현재 로그인한 회원을 돌려준다. 비회원이면 null.
@@ -14,4 +15,11 @@ export function safeNextPath(next: unknown) {
     return "/";
   }
   return next;
+}
+
+// 회원 전용 페이지에서 서버가 직접 로그인 여부를 확인한다 (proxy와 별개의 2차 검증).
+export async function requireUser(nextPath: string) {
+  const user = await getCurrentUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(nextPath)}`);
+  return user;
 }

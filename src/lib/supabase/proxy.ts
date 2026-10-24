@@ -54,7 +54,11 @@ export async function updateSession(request: NextRequest) {
     return redirectTo(url);
   }
 
+  // 로그인/가입 화면은 토큰이 아직 유효해도 서버에서 실제 회원인지 한 번 더 확인한다.
+  // (다른 기기에서 로그아웃했거나 계정이 삭제된 경우 로그인 화면에 갇히지 않도록)
   if (isSignedIn && GUEST_ONLY_PATHS.some((p) => matches(pathname, p))) {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return response;
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";
