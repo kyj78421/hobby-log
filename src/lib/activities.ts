@@ -113,3 +113,23 @@ export async function getPhotoUrlMap(items: { photo_path: string | null }[]) {
   }
   return map;
 }
+
+// 캘린더용: 기간(포함) 안의 본인 기록
+export async function listActivitiesBetween(from: string, to: string): Promise<ActivityListItem[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("activities")
+    .select(LIST_COLUMNS)
+    .gte("activity_date", from)
+    .lte("activity_date", to)
+    .order("activity_date")
+    .order("created_at");
+  if (error) throw new Error("기록을 불러오지 못했어요.");
+  return (data ?? []) as unknown as ActivityListItem[];
+}
+
+export const isDateString = (value: unknown): value is string =>
+  typeof value === "string" &&
+  /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+  !Number.isNaN(new Date(`${value}T00:00:00Z`).getTime()) &&
+  new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;

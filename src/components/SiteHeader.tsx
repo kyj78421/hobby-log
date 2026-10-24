@@ -35,6 +35,9 @@ async function AuthNav() {
 
   return (
     <nav className="flex items-center gap-1 text-[15px] font-semibold sm:gap-2">
+      <Link href="/calendar" className="rounded-[14px] px-3 py-2.5 text-primary-700 hover:bg-primary-50">
+        캘린더
+      </Link>
       <Link href="/activities" className="rounded-[14px] px-3 py-2.5 text-primary-700 hover:bg-primary-50">
         아카이브
       </Link>
