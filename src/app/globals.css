@@ -1,26 +1,39 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* 디자인 가이드 v1.0 3.2 컬러 토큰 (인증 화면에서 쓰는 범위만 먼저 등록) */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-primary-50: #f4f7f4;
+  --color-primary-100: #e7efe7;
+  --color-primary-200: #d1e0d2;
+  --color-primary-300: #b0c7b2;
+  --color-primary-400: #88a98b;
+  --color-primary-500: #668568;
+  --color-primary-600: #526b54;
+  --color-primary-700: #435646;
+  --color-primary-800: #38463a;
+  --color-primary-900: #2f3931;
+  --color-primary-950: #19211a;
+
+  --color-warmNeutral-0: #ffffff;
+  --color-warmNeutral-50: #faf9f6;
+  --color-warmNeutral-100: #f3f1eb;
+  --color-warmNeutral-200: #e7e3da;
+  --color-warmNeutral-300: #d4cec1;
+  --color-warmNeutral-500: #817b70;
+  --color-warmNeutral-700: #514d46;
+  --color-warmNeutral-900: #272a27;
+
+  --color-success: #3f7d57;
+  --color-success-bg: #e7f4ea;
+  --color-error: #b64b4b;
+  --color-error-bg: #fce9e7;
+
+  --font-sans: var(--font-geist-sans), "Pretendard Variable", system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-warmNeutral-50);
+  color: var(--color-warmNeutral-700);
+  font-family: var(--font-sans);
 }
