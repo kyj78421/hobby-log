@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useActionState, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import type { ActivityFormState } from "@/app/activities/actions";
 import type { Category } from "@/lib/activities";
 import { FormError } from "@/components/auth/fields";
@@ -83,6 +83,27 @@ export function ActivityForm({
   const [removeExisting, setRemoveExisting] = useState(false);
   const [photoError, setPhotoError] = useState<string>();
 
+  // 변경된 폼만 이탈 시 확인 (Figma 4.D). 자동 저장은 없다.
+  const router = useRouter();
+  const leaveDialog = useRef<HTMLDialogElement>(null);
+  const dirty =
+    date !== initial.activity_date ||
+    hobbyId !== initial.hobby_id ||
+    title !== initial.title ||
+    content !== initial.content ||
+    emotion !== initial.emotion ||
+    satisfaction !== initial.satisfaction ||
+    previewUrl !== null ||
+    removeExisting;
+  const submitting = useRef(false);
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => {
+      if (dirty && !submitting.current) e.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
   function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -112,8 +133,12 @@ export function ActivityForm({
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (isPending) return;
+    submitting.current = true;
     const data = new FormData(e.currentTarget);
-    startTransition(() => formAction(data));
+    startTransition(async () => {
+      await formAction(data);
+      submitting.current = false;
+    });
   }
 
   const errors = { ...state.fieldErrors, ...(photoError ? { photo: photoError } : {}) };
@@ -212,38 +237,51 @@ export function ActivityForm({
 
       <fieldset>
         <legend className="mb-2 text-sm font-medium text-warmNeutral-900">
-          활동 사진 <span className="text-warmNeutral-500">(선택, 1장 · JPG/PNG/WebP · 5MB 이하)</span>
+          활동 사진 <span className="text-warmNeutral-500">(선택 · 1장 · JPG·PNG·WebP · 5MB 이하)</span>
         </legend>
         {removeExisting && <input type="hidden" name="remove_photo" value="1" />}
         {shownPhoto && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={shownPhoto} alt="선택한 사진 미리보기" className="mb-3 max-h-64 rounded-[14px] object-cover" />
         )}
+        <input
+          ref={fileInput}
+          id="photo"
+          name="photo"
+          type="file"
+          accept={Object.keys(PHOTO_TYPES).join(",")}
+          onChange={onPickPhoto}
+          aria-invalid={!!errors.photo}
+          aria-describedby={errors.photo ? "photo-error" : undefined}
+          className="sr-only"
+        />
         <div className="flex flex-wrap items-center gap-3">
-          <input
-            ref={fileInput}
-            id="photo"
-            name="photo"
-            type="file"
-            accept={Object.keys(PHOTO_TYPES).join(",")}
-            onChange={onPickPhoto}
-            aria-invalid={!!errors.photo}
-            aria-describedby={errors.photo ? "photo-error" : undefined}
-            className="block w-full text-sm text-warmNeutral-700 file:mr-3 file:h-11 file:rounded-[14px] file:border file:border-primary-300 file:bg-warmNeutral-0 file:px-4 file:font-semibold file:text-primary-700"
-          />
-          {previewUrl && (
-            <button type="button" onClick={clearPhoto} className="h-11 rounded-[14px] px-4 text-sm font-semibold text-primary-700 underline">
-              선택 취소
+          <button
+            type="button"
+            onClick={() => fileInput.current?.click()}
+            className="h-12 rounded-[14px] border border-primary-300 bg-warmNeutral-0 px-5 text-[15px] font-semibold text-primary-700 hover:bg-primary-50"
+          >
+            {shownPhoto ? "사진 변경" : "사진 선택하기"}
+          </button>
+          {shownPhoto && (
+            <button
+              type="button"
+              onClick={() => {
+                clearPhoto();
+                if (existingPhotoUrl) setRemoveExisting(true);
+              }}
+              className="h-12 rounded-[14px] px-4 text-[15px] font-semibold text-error underline"
+            >
+              사진 제거
             </button>
           )}
-          {!previewUrl && existingPhotoUrl && !removeExisting && (
-            <button type="button" onClick={() => setRemoveExisting(true)} className="h-11 rounded-[14px] px-4 text-sm font-semibold text-error underline">
-              사진 삭제
-            </button>
-          )}
-          {removeExisting && (
-            <button type="button" onClick={() => setRemoveExisting(false)} className="h-11 rounded-[14px] px-4 text-sm font-semibold text-primary-700 underline">
-              삭제 취소
+          {removeExisting && !previewUrl && (
+            <button
+              type="button"
+              onClick={() => setRemoveExisting(false)}
+              className="h-12 rounded-[14px] px-4 text-[15px] font-semibold text-primary-700 underline"
+            >
+              제거 취소
             </button>
           )}
         </div>
@@ -311,21 +349,54 @@ export function ActivityForm({
         </div>
       </fieldset>
 
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <Link
-          href={cancelHref}
-          className="flex h-12 items-center justify-center rounded-[14px] border border-primary-300 bg-warmNeutral-0 px-6 text-[15px] font-semibold text-primary-700 hover:bg-primary-50"
+      {/* 모바일에서는 하단 탭 대신 저장/취소 바를 화면 아래에 고정 (Figma 4.H) */}
+      <div className="sticky bottom-0 -mx-5 flex gap-3 border-t border-warmNeutral-200 bg-warmNeutral-50 px-5 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 sm:static sm:mx-0 sm:justify-end sm:border-0 sm:bg-transparent sm:p-0">
+        <button
+          type="button"
+          onClick={() => (dirty ? leaveDialog.current?.showModal() : router.push(cancelHref))}
+          className="flex h-12 flex-1 items-center justify-center rounded-[14px] border border-primary-300 bg-warmNeutral-0 px-6 text-[15px] font-semibold text-primary-700 hover:bg-primary-50 sm:flex-none"
         >
           취소
-        </Link>
+        </button>
         <button
           type="submit"
           disabled={isPending}
-          className="h-12 rounded-[14px] bg-primary-700 px-6 text-[15px] font-semibold text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-40"
+          className="h-12 flex-[2] rounded-[14px] bg-primary-700 px-6 text-[15px] font-semibold text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-44 sm:flex-none"
         >
           {isPending ? pendingLabel : submitLabel}
         </button>
       </div>
+
+      <dialog
+        ref={leaveDialog}
+        aria-labelledby="leave-title"
+        className="m-auto w-[min(90vw,420px)] rounded-[20px] p-6 backdrop:bg-black/30"
+      >
+        <h2 id="leave-title" className="text-lg font-bold text-warmNeutral-900">
+          작성 중인 내용을 나갈까요?
+        </h2>
+        <p className="mt-2 text-sm text-warmNeutral-700">저장하지 않은 내용은 사라져요.</p>
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            autoFocus
+            onClick={() => leaveDialog.current?.close()}
+            className="h-11 rounded-[14px] border border-primary-300 px-5 text-[15px] font-semibold text-primary-700"
+          >
+            계속 작성
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              submitting.current = true;
+              router.push(cancelHref);
+            }}
+            className="h-11 rounded-[14px] bg-primary-700 px-5 text-[15px] font-semibold text-white"
+          >
+            나가기
+          </button>
+        </div>
+      </dialog>
     </form>
   );
 }

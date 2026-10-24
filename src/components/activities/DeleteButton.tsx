@@ -12,7 +12,7 @@ function ConfirmButton() {
       disabled={pending}
       className="h-11 rounded-[14px] bg-error px-5 text-[15px] font-semibold text-white disabled:opacity-60"
     >
-      {pending ? "삭제 중…" : "삭제"}
+      {pending ? "삭제 중…" : "삭제하기"}
     </button>
   );
 }
@@ -40,6 +40,7 @@ export function DeleteButton({ id }: { id: string }) {
         <form action={deleteActivity.bind(null, id)} className="mt-6 flex justify-end gap-3">
           <button
             type="button"
+            autoFocus
             onClick={() => dialog.current?.close()}
             className="h-11 rounded-[14px] border border-primary-300 px-5 text-[15px] font-semibold text-primary-700"
           >

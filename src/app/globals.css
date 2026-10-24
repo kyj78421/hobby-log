@@ -29,7 +29,7 @@
   --color-error: #b64b4b;
   --color-error-bg: #fce9e7;
 
-  --font-sans: var(--font-geist-sans), "Pretendard Variable", system-ui, sans-serif;
+  --font-sans: "Pretendard Variable", Pretendard, var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
@@ -37,4 +37,42 @@ body {
   background: var(--color-warmNeutral-50);
   color: var(--color-warmNeutral-700);
   font-family: var(--font-sans);
+}
+
+/* Figma 4.H: focus ring 2px #668568 + 2px offset */
+:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* 날짜·숫자 정렬 안정화 (design.md 4.1) */
+body {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 운영체제의 동작 줄이기 설정을 존중 (design.md 9, Figma 4.H) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .hover\:-translate-y-0\.5:hover {
+    transform: none;
+  }
+}
+
+/* 회원 앱 셸: 1024+ 에서는 240px 사이드바만큼, 모바일은 하단 탭 높이만큼 본문을 비운다 (Figma 4.H) */
+@media (min-width: 1024px) {
+  body:has([data-sidebar]) .app-content {
+    padding-left: 15rem;
+  }
+}
+@media (max-width: 1023px) {
+  body:has([data-bottom-tab]) .app-content {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 96px);
+  }
 }

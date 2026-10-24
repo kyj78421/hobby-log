@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import { ActivityCard } from "@/components/activities/ActivityCard";
 import { getCategories, getPhotoUrlMap, listActivities } from "@/lib/activities";
 import { requireUser } from "@/lib/auth";
+import { CardListSkeleton } from "@/components/Skeleton";
+import { FlashMessage } from "@/components/FlashMessage";
 
 export const metadata = { title: "아카이브 · HOBBY LOG" };
 
@@ -11,7 +13,7 @@ type SearchParams = Promise<{ category?: string; sort?: string; deleted?: string
 export default function ArchivePage({ searchParams }: { searchParams: SearchParams }) {
   return (
     <main className="mx-auto w-full max-w-[1200px] flex-1 px-5 py-10">
-      <Suspense fallback={<div className="h-64" aria-busy="true" />}>
+      <Suspense fallback={<CardListSkeleton />}>
         <Archive searchParams={searchParams} />
       </Suspense>
     </main>
@@ -39,9 +41,12 @@ async function Archive({ searchParams }: { searchParams: SearchParams }) {
     activities = await listActivities({ categoryId, sort });
   } catch {
     return (
-      <p role="alert" className="rounded-[12px] bg-error-bg px-4 py-3 text-error">
-        기록을 불러오지 못했어요. 새로고침해 다시 시도해 주세요.
-      </p>
+      <div role="alert" className="rounded-[12px] bg-error-bg px-4 py-4 text-error">
+        <p>기록을 불러오지 못했어요.</p>
+        <Link href={href(categoryId, sort)} className="mt-2 inline-block font-semibold underline">
+          다시 시도
+        </Link>
+      </div>
     );
   }
 
@@ -72,9 +77,9 @@ async function Archive({ searchParams }: { searchParams: SearchParams }) {
       </div>
 
       {sp.deleted && (
-        <p role="status" className="mt-6 rounded-[12px] bg-success-bg px-4 py-3 text-sm text-success">
-          기록을 삭제했어요.
-        </p>
+        <div className="mt-6">
+          <FlashMessage message="기록을 삭제했어요." />
+        </div>
       )}
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
@@ -105,19 +110,19 @@ async function Archive({ searchParams }: { searchParams: SearchParams }) {
         <div className="mt-10 rounded-[20px] border border-dashed border-warmNeutral-300 px-6 py-16 text-center">
           {filtered ? (
             <>
-              <p className="text-warmNeutral-900">이 분류의 기록이 아직 없어요.</p>
+              <p className="text-warmNeutral-900">이 취미의 기록이 없어요.</p>
               <Link href={href(undefined, sort)} className="mt-4 inline-block text-primary-700 underline">
                 필터 초기화
               </Link>
             </>
           ) : (
             <>
-              <p className="text-warmNeutral-900">아직 기록이 없어요. 오늘의 취미를 첫 잎으로 남겨보세요.</p>
+              <p className="text-warmNeutral-900">아직 기록이 없어요. 좋아하는 순간을 처음으로 남겨보세요.</p>
               <Link
                 href="/activities/new"
                 className="mt-6 inline-block rounded-[14px] bg-primary-700 px-6 py-3.5 text-[15px] font-semibold text-white hover:bg-primary-600"
               >
-                첫 기록 작성하기
+                첫 기록 남기기
               </Link>
             </>
           )}

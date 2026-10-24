@@ -24,9 +24,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <SiteHeader />
-        {children}
+      <head>
+        {/* Figma: 개발 폰트 Pretendard Variable 우선 (패키지 추가 없이 스타일시트로 로드) */}
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+        />
+      </head>
+      <body className="min-h-full">
+        <div className="flex min-h-screen flex-col">
+          <SiteHeader />
+          <div className="app-content flex flex-1 flex-col">{children}</div>
+        </div>
       </body>
     </html>
   );

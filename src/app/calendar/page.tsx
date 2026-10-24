@@ -10,6 +10,8 @@ import {
   type ActivityListItem,
 } from "@/lib/activities";
 import { requireUser } from "@/lib/auth";
+import { BlockSkeleton } from "@/components/Skeleton";
+import { CalendarKeys } from "@/components/CalendarKeys";
 import { buildMonthGrid, isMonthString, monthLabel, monthRange, shiftMonth } from "@/lib/calendar";
 import { getEmotion } from "@/lib/emotions";
 
@@ -22,7 +24,7 @@ export default function CalendarPage({ searchParams }: { searchParams: SearchPar
   return (
     <main className="mx-auto w-full max-w-[1200px] flex-1 px-5 py-10">
       <h1 className="mb-6 text-[30px] font-bold text-primary-900 sm:text-4xl">캘린더</h1>
-      <Suspense fallback={<div className="h-96" aria-busy="true" />}>
+      <Suspense fallback={<BlockSkeleton className="h-96" />}>
         <Calendar searchParams={searchParams} />
       </Suspense>
     </main>
@@ -47,9 +49,12 @@ async function Calendar({ searchParams }: { searchParams: SearchParams }) {
     activities = await listActivitiesBetween(from, to);
   } catch {
     return (
-      <p role="alert" className="rounded-[12px] bg-error-bg px-4 py-3 text-error">
-        기록을 불러오지 못했어요. 새로고침해 다시 시도해 주세요.
-      </p>
+      <div role="alert" className="rounded-[12px] bg-error-bg px-4 py-4 text-error">
+        <p>기록을 불러오지 못했어요.</p>
+        <Link href={`/calendar?month=${month}`} className="mt-2 inline-block font-semibold underline">
+          다시 시도
+        </Link>
+      </div>
     );
   }
 
@@ -80,7 +85,7 @@ async function Calendar({ searchParams }: { searchParams: SearchParams }) {
           </div>
         </div>
 
-        <table className="w-full table-fixed border-separate border-spacing-1">
+        <table data-calendar className="w-full table-fixed border-separate border-spacing-1">
           <thead>
             <tr>
               {WEEKDAYS.map((d) => (
@@ -136,6 +141,7 @@ async function Calendar({ searchParams }: { searchParams: SearchParams }) {
             ))}
           </tbody>
         </table>
+        <CalendarKeys />
       </section>
 
       <section aria-live="polite">
@@ -153,7 +159,7 @@ async function Calendar({ searchParams }: { searchParams: SearchParams }) {
                   href={`/activities/new?date=${selected}`}
                   className="mt-5 inline-block rounded-[14px] bg-primary-700 px-5 py-3 text-[15px] font-semibold text-white hover:bg-primary-600"
                 >
-                  이 날 기록하기
+                  이 날짜에 기록하기
                 </Link>
               </div>
             ) : (

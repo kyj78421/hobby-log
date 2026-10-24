@@ -5,18 +5,20 @@ import { DeleteButton } from "@/components/activities/DeleteButton";
 import { getEmotion } from "@/lib/emotions";
 import { formatDate, getActivity, getPhotoUrl } from "@/lib/activities";
 import { requireUser } from "@/lib/auth";
+import { BlockSkeleton } from "@/components/Skeleton";
+import { FlashMessage } from "@/components/FlashMessage";
 
 export const metadata = { title: "기록 상세 · HOBBY LOG" };
 
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; saved?: string }>;
 };
 
 export default function ActivityDetailPage({ params, searchParams }: Props) {
   return (
     <main className="mx-auto w-full max-w-[760px] flex-1 px-5 py-10">
-      <Suspense fallback={<div className="h-96" aria-busy="true" />}>
+      <Suspense fallback={<BlockSkeleton className="h-96" />}>
         <Detail params={params} searchParams={searchParams} />
       </Suspense>
     </main>
@@ -25,7 +27,7 @@ export default function ActivityDetailPage({ params, searchParams }: Props) {
 
 async function Detail({ params, searchParams }: Props) {
   const { id } = await params;
-  const { error } = await searchParams;
+  const { error, saved } = await searchParams;
   await requireUser(`/activities/${id}`);
 
   const activity = await getActivity(id);
@@ -38,6 +40,11 @@ async function Detail({ params, searchParams }: Props) {
       <Link href="/activities" className="text-sm text-primary-700 underline">
         ← 아카이브
       </Link>
+      {saved && (
+        <div className="mt-4">
+          <FlashMessage message="기록을 저장했어요." />
+        </div>
+      )}
       {error === "delete" && (
         <p role="alert" className="mt-4 rounded-[12px] bg-error-bg px-4 py-3 text-sm text-error">
           기록을 삭제하지 못했어요. 다시 시도해 주세요.

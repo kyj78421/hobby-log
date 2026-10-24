@@ -141,3 +141,17 @@ export async function getMyHobbyIds(): Promise<number[]> {
   if (error) throw new Error("관심 취미를 불러오지 못했어요.");
   return (data ?? []).map((r) => r.hobby_id as number);
 }
+
+// "2026-10-24" → "2026.10.24"
+export const formatShortDate = (date: string) => date.replaceAll("-", ".");
+
+export async function countActivitiesBetween(from: string, to: string): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("activities")
+    .select("id", { count: "exact", head: true })
+    .gte("activity_date", from)
+    .lte("activity_date", to);
+  if (error) throw new Error("기록을 불러오지 못했어요.");
+  return count ?? 0;
+}

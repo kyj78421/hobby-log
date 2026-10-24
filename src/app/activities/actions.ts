@@ -123,7 +123,7 @@ export async function createActivity(
     return { values, error: "기록을 저장하지 못했어요. 다시 시도해 주세요." };
   }
 
-  redirect(`/activities/${data.id}`);
+  redirect(`/activities/${data.id}?saved=1`);
 }
 
 export async function updateActivity(
@@ -165,7 +165,7 @@ export async function updateActivity(
   }
 
   if (newPath || removePhoto) await removePhotoFile(supabase, existing.photo_path);
-  redirect(`/activities/${id}`);
+  redirect(`/activities/${id}?saved=1`);
 }
 
 export async function deleteActivity(id: string) {

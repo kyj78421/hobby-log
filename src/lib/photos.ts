@@ -8,7 +8,7 @@ export const PHOTO_TYPES: Record<string, string> = {
 
 // 서버·클라이언트 공용 검증. 문제가 없으면 null.
 export function validatePhoto(file: { type: string; size: number }): string | null {
-  if (!(file.type in PHOTO_TYPES)) return "지원하지 않는 이미지 형식이에요. JPG, PNG, WebP만 올릴 수 있어요.";
+  if (!(file.type in PHOTO_TYPES)) return "지원하지 않는 이미지 형식이에요. JPG·PNG·WebP를 선택해 주세요.";
   if (file.size > MAX_PHOTO_BYTES) return "5MB 이하 사진을 선택해 주세요.";
   return null;
 }
