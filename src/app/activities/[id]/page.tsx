@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { DeleteButton } from "@/components/activities/DeleteButton";
 import { getEmotion } from "@/lib/emotions";
-import { formatDate, getActivity } from "@/lib/activities";
+import { formatDate, getActivity, getPhotoUrl } from "@/lib/activities";
 import { requireUser } from "@/lib/auth";
 
 export const metadata = { title: "기록 상세 · HOBBY LOG" };
@@ -31,6 +31,7 @@ async function Detail({ params, searchParams }: Props) {
   const activity = await getActivity(id);
   if (!activity) notFound();
   const emotion = getEmotion(activity.emotion);
+  const photoUrl = await getPhotoUrl(activity.photo_path);
 
   return (
     <article>
@@ -41,6 +42,14 @@ async function Detail({ params, searchParams }: Props) {
         <p role="alert" className="mt-4 rounded-[12px] bg-error-bg px-4 py-3 text-sm text-error">
           기록을 삭제하지 못했어요. 다시 시도해 주세요.
         </p>
+      )}
+      {photoUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={photoUrl}
+          alt={`${activity.title} 사진`}
+          className="mt-6 max-h-[560px] w-full rounded-[20px] object-cover"
+        />
       )}
       <p className="mt-6 inline-block rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-800">
         {activity.hobby.category.name} · {activity.hobby.name}

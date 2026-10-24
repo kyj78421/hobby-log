@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { isUuid } from "@/lib/activities";
 import { EMOTIONS } from "@/lib/emotions";
+import { PHOTO_BUCKET, PHOTO_TYPES, validatePhoto } from "@/lib/photos";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActivityFormState = {
@@ -18,7 +19,14 @@ export type ActivityFormState = {
   };
   fieldErrors?: Partial<
     Record<
-      "activity_date" | "category_id" | "hobby_id" | "title" | "content" | "emotion" | "satisfaction",
+      | "activity_date"
+      | "category_id"
+      | "hobby_id"
+      | "title"
+      | "content"
+      | "emotion"
+      | "satisfaction"
+      | "photo",
       string
     >
   >;
@@ -52,7 +60,14 @@ function parse(formData: FormData) {
     fieldErrors.emotion = "감정을 다시 선택해 주세요.";
   if (values.satisfaction && !/^[1-5]$/.test(values.satisfaction))
     fieldErrors.satisfaction = "만족도는 1~5점 중에서 선택해 주세요.";
-  return { values, fieldErrors };
+
+  const file = formData.get("photo");
+  const photo = file instanceof File && file.size > 0 ? file : null;
+  if (photo) {
+    const message = validatePhoto(photo);
+    if (message) fieldErrors.photo = message;
+  }
+  return { values, fieldErrors, photo, removePhoto: formData.get("remove_photo") === "1" };
 }
 
 const row = (v: NonNullable<ActivityFormState["values"]>) => ({
@@ -64,6 +79,21 @@ const row = (v: NonNullable<ActivityFormState["values"]>) => ({
   satisfaction: v.satisfaction ? Number(v.satisfaction) : null,
 });
 
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+async function uploadPhoto(supabase: Supabase, userId: string, photo: File) {
+  const path = `${userId}/${crypto.randomUUID()}.${PHOTO_TYPES[photo.type]}`;
+  const { error } = await supabase.storage
+    .from(PHOTO_BUCKET)
+    .upload(path, photo, { contentType: photo.type });
+  return error ? null : path;
+}
+
+// 정리 실패는 사용자 흐름을 막지 않는다 (남은 파일은 본인 폴더의 고아 파일로 남을 뿐이다).
+async function removePhotoFile(supabase: Supabase, path: string | null | undefined) {
+  if (path) await supabase.storage.from(PHOTO_BUCKET).remove([path]);
+}
+
 export async function createActivity(
   _prev: ActivityFormState,
   formData: FormData,
@@ -71,16 +101,27 @@ export async function createActivity(
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/activities/new");
 
-  const { values, fieldErrors } = parse(formData);
+  const { values, fieldErrors, photo } = parse(formData);
   if (Object.keys(fieldErrors).length > 0) return { values, fieldErrors };
 
   const supabase = await createClient();
+  let photoPath: string | null = null;
+  if (photo) {
+    photoPath = await uploadPhoto(supabase, user.id, photo);
+    if (!photoPath) {
+      return { values, fieldErrors: { photo: "사진을 올리지 못했어요. 다시 시도해 주세요." } };
+    }
+  }
+
   const { data, error } = await supabase
     .from("activities")
-    .insert({ ...row(values), user_id: user.id })
+    .insert({ ...row(values), user_id: user.id, photo_path: photoPath })
     .select("id")
     .single();
-  if (error || !data) return { values, error: "기록을 저장하지 못했어요. 다시 시도해 주세요." };
+  if (error || !data) {
+    await removePhotoFile(supabase, photoPath);
+    return { values, error: "기록을 저장하지 못했어요. 다시 시도해 주세요." };
+  }
 
   redirect(`/activities/${data.id}`);
 }
@@ -94,18 +135,36 @@ export async function updateActivity(
   if (!user) redirect(`/login?next=/activities/${id}/edit`);
   if (!isUuid(id)) return { error: "요청한 기록을 찾을 수 없어요." };
 
-  const { values, fieldErrors } = parse(formData);
+  const { values, fieldErrors, photo, removePhoto } = parse(formData);
   if (Object.keys(fieldErrors).length > 0) return { values, fieldErrors };
 
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data: existing } = await supabase
     .from("activities")
-    .update(row(values))
+    .select("photo_path")
     .eq("id", id)
-    .select("id");
-  if (error) return { values, error: "기록을 저장하지 못했어요. 다시 시도해 주세요." };
-  if (!data || data.length === 0) return { values, error: "요청한 기록을 찾을 수 없어요." };
+    .maybeSingle();
+  if (!existing) return { values, error: "요청한 기록을 찾을 수 없어요." };
 
+  const changes: ReturnType<typeof row> & { photo_path?: string | null } = row(values);
+  let newPath: string | null = null;
+  if (photo) {
+    newPath = await uploadPhoto(supabase, user.id, photo);
+    if (!newPath) {
+      return { values, fieldErrors: { photo: "사진을 올리지 못했어요. 다시 시도해 주세요." } };
+    }
+    changes.photo_path = newPath;
+  } else if (removePhoto) {
+    changes.photo_path = null;
+  }
+
+  const { data, error } = await supabase.from("activities").update(changes).eq("id", id).select("id");
+  if (error || !data || data.length === 0) {
+    await removePhotoFile(supabase, newPath);
+    return { values, error: "기록을 저장하지 못했어요. 다시 시도해 주세요." };
+  }
+
+  if (newPath || removePhoto) await removePhotoFile(supabase, existing.photo_path);
   redirect(`/activities/${id}`);
 }
 
@@ -115,9 +174,16 @@ export async function deleteActivity(id: string) {
   if (!isUuid(id)) redirect("/activities");
 
   const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("activities")
+    .select("photo_path")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await supabase.from("activities").delete().eq("id", id);
   // 이미 삭제된 기록을 다시 지워도 같은 결과(멱등)로 처리한다.
   if (error) redirect(`/activities/${id}?error=delete`);
 
+  await removePhotoFile(supabase, existing?.photo_path);
   redirect("/activities?deleted=1");
 }

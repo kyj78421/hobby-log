@@ -1,3 +1,4 @@
+import { PHOTO_BUCKET } from "@/lib/photos";
 import { createClient } from "@/lib/supabase/server";
 
 export type Hobby = { id: number; name: string };
@@ -9,6 +10,7 @@ export type ActivityListItem = {
   activity_date: string;
   emotion: string | null;
   satisfaction: number | null;
+  photo_path: string | null;
   hobby: { id: number; name: string; category: { id: number; name: string } };
 };
 
@@ -18,7 +20,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 export const isUuid = (value: string) => UUID_PATTERN.test(value);
 
 const LIST_COLUMNS =
-  "id, title, activity_date, emotion, satisfaction, hobby:hobbies!inner(id, name, category:hobby_categories!inner(id, name))";
+  "id, title, activity_date, emotion, satisfaction, photo_path, hobby:hobbies!inner(id, name, category:hobby_categories!inner(id, name))";
 
 export async function getCategories(): Promise<Category[]> {
   const supabase = await createClient();
@@ -89,4 +91,25 @@ export function formatDate(date: string) {
 
 export function todayInSeoul() {
   return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+}
+
+// 비공개 버킷의 사진을 잠깐 볼 수 있는 주소(1시간). 본인 폴더가 아니면 RLS가 막아 null이 된다.
+export async function getPhotoUrl(path: string | null): Promise<string | null> {
+  if (!path) return null;
+  const supabase = await createClient();
+  const { data } = await supabase.storage.from(PHOTO_BUCKET).createSignedUrl(path, 3600);
+  return data?.signedUrl ?? null;
+}
+
+// 목록 카드용: 사진이 있는 기록들의 서명 주소를 한 번에 만든다. { photo_path: url }
+export async function getPhotoUrlMap(items: { photo_path: string | null }[]) {
+  const paths = items.map((i) => i.photo_path).filter((p): p is string => !!p);
+  const map: Record<string, string> = {};
+  if (paths.length === 0) return map;
+  const supabase = await createClient();
+  const { data } = await supabase.storage.from(PHOTO_BUCKET).createSignedUrls(paths, 3600);
+  for (const item of data ?? []) {
+    if (item.path && item.signedUrl) map[item.path] = item.signedUrl;
+  }
+  return map;
 }

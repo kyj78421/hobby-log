@@ -1,4 +1,4 @@
-import { sql, randPw, createTestUser, deleteTestUsers, signIn, rest } from "./lib.mjs";
+import { sql, randPw, createTestUser, deleteTestUsers, signIn, rest, URL_, KEY } from "./lib.mjs";
 let fail = 0;
 const check = (name, ok, extra = "") => { console.log(ok ? "PASS" : "FAIL", name, ok ? "" : extra); if (!ok) fail++; };
 await deleteTestUsers();
@@ -30,6 +30,19 @@ try {
   check("빈 제목 거부(DB 제약)", (await rest("activities", ta, { method: "POST", body: JSON.stringify({ hobby_id: hid, activity_date: "2026-10-24", title: "   ", content: "x" }) })).status >= 400);
   check("만족도 범위(1~5) 제약", (await rest("activities", ta, { method: "POST", body: JSON.stringify({ hobby_id: hid, activity_date: "2026-10-24", title: "t", content: "x", satisfaction: 9 }) })).status >= 400);
   check("A 기록은 A가 삭제 가능", (await rest(`activities?id=eq.${rid}`, ta, { method: "DELETE" })).body.length === 1);
+  // 사진 Storage 정책
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+  const uidA = JSON.parse(Buffer.from(ta.split(".")[1], "base64url").toString()).sub;
+  const up = (token, path, type = "image/png", body = png) => fetch(`${URL_}/storage/v1/object/activity-photos/${path}`, { method: "POST", headers: { apikey: KEY, Authorization: `Bearer ${token}`, "Content-Type": type }, body });
+  check("A는 본인 폴더에 사진 업로드", (await up(ta, `${uidA}/t1.png`)).status === 200);
+  check("B는 A 폴더에 업로드 불가", (await up(tb, `${uidA}/t2.png`)).status >= 400);
+  check("A는 본인 사진 서명 주소 생성", (await fetch(`${URL_}/storage/v1/object/sign/activity-photos/${uidA}/t1.png`, { method: "POST", headers: { apikey: KEY, Authorization: `Bearer ${ta}`, "Content-Type": "application/json" }, body: JSON.stringify({ expiresIn: 60 }) })).status === 200);
+  check("B는 A 사진 서명 주소 생성 불가", (await fetch(`${URL_}/storage/v1/object/sign/activity-photos/${uidA}/t1.png`, { method: "POST", headers: { apikey: KEY, Authorization: `Bearer ${tb}`, "Content-Type": "application/json" }, body: JSON.stringify({ expiresIn: 60 }) })).status >= 400);
+  check("허용되지 않은 형식(GIF) 업로드 거부", (await up(ta, `${uidA}/t3.gif`, "image/gif")).status >= 400);
+  check("비로그인은 업로드 불가", (await up(KEY, `${uidA}/t4.png`)).status >= 400);
+  check("B는 A 사진 삭제 불가(객체 유지)", (await (await fetch(`${URL_}/storage/v1/object/activity-photos`, { method: "DELETE", headers: { apikey: KEY, Authorization: `Bearer ${tb}`, "Content-Type": "application/json" }, body: JSON.stringify({ prefixes: [`${uidA}/t1.png`] }) })).json()).length === 0);
+  check("남의 폴더 경로를 photo_path로 저장 불가", (await rest("activities", tb, { method: "POST", body: JSON.stringify({ hobby_id: hid, activity_date: "2026-10-24", title: "t", content: "x", photo_path: `${uidA}/t1.png` }) })).status >= 400);
+  check("A는 본인 사진 삭제", (await (await fetch(`${URL_}/storage/v1/object/activity-photos`, { method: "DELETE", headers: { apikey: KEY, Authorization: `Bearer ${ta}`, "Content-Type": "application/json" }, body: JSON.stringify({ prefixes: [`${uidA}/t1.png`] }) })).json()).length === 1);
   check("비로그인은 기록 조회 불가", ((await rest("activities?select=id")).body ?? []).length === 0);
 } finally {
   await deleteTestUsers();

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { ActivityCard } from "@/components/activities/ActivityCard";
-import { countActivities, listActivities, type ActivityListItem } from "@/lib/activities";
+import { countActivities, getPhotoUrlMap, listActivities, type ActivityListItem } from "@/lib/activities";
 import { getCurrentUser } from "@/lib/auth";
 
 export default function Home() {
@@ -42,9 +42,11 @@ async function HomeContent() {
 async function Dashboard({ email }: { email: string }) {
   let total = 0;
   let recent: ActivityListItem[] = [];
+  let photoUrls: Record<string, string> = {};
   let failed = false;
   try {
     [total, recent] = await Promise.all([countActivities(), listActivities({ limit: 5 })]);
+    photoUrls = await getPhotoUrlMap(recent);
   } catch {
     failed = true;
   }
@@ -86,7 +88,7 @@ async function Dashboard({ email }: { email: string }) {
           <ul className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {recent.map((a) => (
               <li key={a.id}>
-                <ActivityCard activity={a} />
+                <ActivityCard activity={a} photoUrl={a.photo_path ? photoUrls[a.photo_path] : undefined} />
               </li>
             ))}
           </ul>

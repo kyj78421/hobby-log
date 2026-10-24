@@ -2,13 +2,28 @@ import Link from "next/link";
 import { getEmotion } from "@/lib/emotions";
 import { formatDate, type ActivityListItem } from "@/lib/activities";
 
-export function ActivityCard({ activity }: { activity: ActivityListItem }) {
+export function ActivityCard({
+  activity,
+  photoUrl,
+}: {
+  activity: ActivityListItem;
+  photoUrl?: string;
+}) {
   const emotion = getEmotion(activity.emotion);
   return (
     <Link
       href={`/activities/${activity.id}`}
       className="block rounded-[20px] border border-warmNeutral-200 bg-warmNeutral-0 p-5 transition-transform hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(39,42,39,.08)]"
     >
+      {photoUrl && (
+        // 서명된 임시 주소라 next/image 최적화 대상이 아니다.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={photoUrl}
+          alt={`${activity.title} 사진`}
+          className="-mx-1 -mt-1 mb-4 aspect-[4/3] w-[calc(100%+0.5rem)] rounded-[14px] object-cover"
+        />
+      )}
       <p className="inline-block rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-800">
         {activity.hobby.category.name} · {activity.hobby.name}
       </p>

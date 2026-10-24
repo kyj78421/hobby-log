@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { ActivityCard } from "@/components/activities/ActivityCard";
-import { getCategories, listActivities } from "@/lib/activities";
+import { getCategories, getPhotoUrlMap, listActivities } from "@/lib/activities";
 import { requireUser } from "@/lib/auth";
 
 export const metadata = { title: "아카이브 · HOBBY LOG" };
@@ -45,6 +45,7 @@ async function Archive({ searchParams }: { searchParams: SearchParams }) {
     );
   }
 
+  const photoUrls = await getPhotoUrlMap(activities);
   const filtered = categoryId !== undefined;
   const chip = (active: boolean) =>
     `rounded-full border px-4 py-2 text-sm font-medium ${
@@ -125,7 +126,7 @@ async function Archive({ searchParams }: { searchParams: SearchParams }) {
         <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {activities.map((a) => (
             <li key={a.id}>
-              <ActivityCard activity={a} />
+              <ActivityCard activity={a} photoUrl={a.photo_path ? photoUrls[a.photo_path] : undefined} />
             </li>
           ))}
         </ul>

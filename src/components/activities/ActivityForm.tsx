@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 import type { ActivityFormState } from "@/app/activities/actions";
 import type { Category } from "@/lib/activities";
-import { FormError, SubmitButton } from "@/components/auth/fields";
+import { FormError } from "@/components/auth/fields";
 import { EMOTIONS } from "@/lib/emotions";
+import { PHOTO_TYPES, validatePhoto } from "@/lib/photos";
 
 type Initial = {
   id?: string;
@@ -50,6 +51,7 @@ export function ActivityForm({
   action,
   categories,
   initial,
+  existingPhotoUrl,
   submitLabel,
   pendingLabel,
   cancelHref,
@@ -57,11 +59,13 @@ export function ActivityForm({
   action: (prev: ActivityFormState, formData: FormData) => Promise<ActivityFormState>;
   categories: Category[];
   initial: Initial;
+  existingPhotoUrl?: string | null;
   submitLabel: string;
   pendingLabel: string;
   cancelHref: string;
 }) {
-  const [state, formAction] = useActionState<ActivityFormState, FormData>(action, {});
+  const [state, formAction, isPending] = useActionState<ActivityFormState, FormData>(action, {});
+  const [, startTransition] = useTransition();
   const initialCategory =
     categories.find((c) => c.hobbies.some((h) => String(h.id) === initial.hobby_id))?.id ?? "";
 
@@ -73,14 +77,53 @@ export function ActivityForm({
   const [content, setContent] = useState(initial.content);
   const [emotion, setEmotion] = useState(initial.emotion);
   const [satisfaction, setSatisfaction] = useState(initial.satisfaction);
+  // 사진: 새로 고른 파일의 미리보기, 기존 사진 제거 여부
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [removeExisting, setRemoveExisting] = useState(false);
+  const [photoError, setPhotoError] = useState<string>();
 
-  const errors = state.fieldErrors ?? {};
+  function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPhotoError(undefined);
+    if (!file) {
+      setPreviewUrl(null);
+      return;
+    }
+    const message = validatePhoto(file);
+    if (message) {
+      setPhotoError(message);
+      setPreviewUrl(null);
+      e.target.value = "";
+      return;
+    }
+    setPreviewUrl(URL.createObjectURL(file));
+  }
+
+  function clearPhoto() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setPhotoError(undefined);
+    if (fileInput.current) fileInput.current.value = "";
+  }
+
+  // form action 대신 직접 제출해, 저장에 실패해도 입력과 사진 미리보기가 초기화되지 않게 한다.
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (isPending) return;
+    const data = new FormData(e.currentTarget);
+    startTransition(() => formAction(data));
+  }
+
+  const errors = { ...state.fieldErrors, ...(photoError ? { photo: photoError } : {}) };
+  const shownPhoto = previewUrl ?? (removeExisting ? null : (existingPhotoUrl ?? null));
   const hobbies = categories.find((c) => String(c.id) === categoryId)?.hobbies ?? [];
   const border = (key: keyof typeof errors) =>
     errors[key] ? "border-error" : "border-warmNeutral-200";
 
   return (
-    <form action={formAction} className="space-y-5" noValidate>
+    <form onSubmit={onSubmit} className="space-y-5" noValidate>
       {initial.id && <input type="hidden" name="id" value={initial.id} />}
       <FormError message={state.error} />
 
@@ -169,6 +212,50 @@ export function ActivityForm({
 
       <fieldset>
         <legend className="mb-2 text-sm font-medium text-warmNeutral-900">
+          활동 사진 <span className="text-warmNeutral-500">(선택, 1장 · JPG/PNG/WebP · 5MB 이하)</span>
+        </legend>
+        {removeExisting && <input type="hidden" name="remove_photo" value="1" />}
+        {shownPhoto && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={shownPhoto} alt="선택한 사진 미리보기" className="mb-3 max-h-64 rounded-[14px] object-cover" />
+        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            ref={fileInput}
+            id="photo"
+            name="photo"
+            type="file"
+            accept={Object.keys(PHOTO_TYPES).join(",")}
+            onChange={onPickPhoto}
+            aria-invalid={!!errors.photo}
+            aria-describedby={errors.photo ? "photo-error" : undefined}
+            className="block w-full text-sm text-warmNeutral-700 file:mr-3 file:h-11 file:rounded-[14px] file:border file:border-primary-300 file:bg-warmNeutral-0 file:px-4 file:font-semibold file:text-primary-700"
+          />
+          {previewUrl && (
+            <button type="button" onClick={clearPhoto} className="h-11 rounded-[14px] px-4 text-sm font-semibold text-primary-700 underline">
+              선택 취소
+            </button>
+          )}
+          {!previewUrl && existingPhotoUrl && !removeExisting && (
+            <button type="button" onClick={() => setRemoveExisting(true)} className="h-11 rounded-[14px] px-4 text-sm font-semibold text-error underline">
+              사진 삭제
+            </button>
+          )}
+          {removeExisting && (
+            <button type="button" onClick={() => setRemoveExisting(false)} className="h-11 rounded-[14px] px-4 text-sm font-semibold text-primary-700 underline">
+              삭제 취소
+            </button>
+          )}
+        </div>
+        {errors.photo && (
+          <p id="photo-error" role="alert" className="mt-2 text-sm text-error">
+            {errors.photo}
+          </p>
+        )}
+      </fieldset>
+
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium text-warmNeutral-900">
           오늘의 감정 <span className="text-warmNeutral-500">(선택)</span>
         </legend>
         <input type="hidden" name="emotion" value={emotion} />
@@ -231,9 +318,13 @@ export function ActivityForm({
         >
           취소
         </Link>
-        <div className="sm:w-40">
-          <SubmitButton pendingLabel={pendingLabel}>{submitLabel}</SubmitButton>
-        </div>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="h-12 rounded-[14px] bg-primary-700 px-6 text-[15px] font-semibold text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-40"
+        >
+          {isPending ? pendingLabel : submitLabel}
+        </button>
       </div>
     </form>
   );

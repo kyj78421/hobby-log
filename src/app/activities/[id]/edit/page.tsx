@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { updateActivity } from "@/app/activities/actions";
 import { ActivityForm } from "@/components/activities/ActivityForm";
-import { getActivity, getCategories } from "@/lib/activities";
+import { getActivity, getCategories, getPhotoUrl } from "@/lib/activities";
 import { requireUser } from "@/lib/auth";
 
 export const metadata = { title: "기록 수정 · HOBBY LOG" };
@@ -24,6 +24,7 @@ async function EditForm({ params }: { params: Promise<{ id: string }> }) {
 
   const [activity, categories] = await Promise.all([getActivity(id), getCategories()]);
   if (!activity) notFound();
+  const photoUrl = await getPhotoUrl(activity.photo_path);
 
   return (
     <ActivityForm
@@ -38,6 +39,7 @@ async function EditForm({ params }: { params: Promise<{ id: string }> }) {
         emotion: activity.emotion ?? "",
         satisfaction: activity.satisfaction ? String(activity.satisfaction) : "",
       }}
+      existingPhotoUrl={photoUrl}
       submitLabel="저장"
       pendingLabel="저장 중…"
       cancelHref={`/activities/${activity.id}`}
