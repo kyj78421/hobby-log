@@ -13,7 +13,6 @@ try {
   const ta = a.body.access_token, tb = b.body.access_token;
   const hob = await rest("hobbies?select=id,name&limit=1", ta);
   check("회원은 세부 취미 조회 가능", hob.status === 200 && hob.body.length === 1);
-  check("비로그인은 세부 취미 조회 불가(빈 결과/거부)", (await rest("hobbies?select=id")).body?.length !== 33 );
   const hid = hob.body[0].id;
   const ins = await rest("activities", ta, { method: "POST", body: JSON.stringify({ hobby_id: hid, activity_date: "2026-10-24", title: "A의 기록", content: "내용" }) });
   check("A 기록 작성(user_id 자동 지정)", ins.status === 201 && !!ins.body[0]?.user_id, JSON.stringify(ins.body));
@@ -68,6 +67,19 @@ try {
   const stat = await sql(`select c.name, count(*)::int n from public.hobby_bookmarks b join public.hobbies h on h.id=b.hobby_id join public.hobby_categories c on c.id=h.category_id where b.user_id='${uidA}' group by c.name order by c.name`);
   check("대분류별 집계 합계 = 전체 북마크 수", stat.reduce((a, r) => a + r.n, 0) === 3 && stat.length === 2, JSON.stringify(stat));
   check("A 북마크 해제 후 2개", (await rest("hobby_bookmarks?hobby_id=eq.1", ta, { method: "DELETE" })).status === 200 && (await rest("hobby_bookmarks?select=hobby_id", ta)).body.length === 2);
+  // 비회원 공개 읽기: 카테고리·세부 취미만
+  const anonCats = await rest("hobby_categories?select=id");
+  const anonHobbies = await rest("hobbies?select=id");
+  check("비회원은 카테고리 9개 조회 가능", anonCats.status === 200 && anonCats.body.length === 9, JSON.stringify(anonCats.body).slice(0, 80));
+  check("비회원은 세부 취미 33개 조회 가능", anonHobbies.status === 200 && anonHobbies.body.length === 33);
+  check("비회원은 카테고리·취미 쓰기(추가·수정·삭제) 불가", (await rest("hobbies", null, { method: "POST", body: JSON.stringify({ category_id: 1, name: "해킹", sort_order: 99 }) })).status >= 400 && ((await rest("hobbies?id=eq.1", null, { method: "PATCH", body: JSON.stringify({ name: "x" }) })).body ?? []).length === 0 && ((await rest("hobby_categories?id=eq.1", null, { method: "DELETE" })).body ?? []).length === 0);
+  check("로그인 회원도 카테고리·취미 쓰기 불가", (await rest("hobbies", ta, { method: "POST", body: JSON.stringify({ category_id: 1, name: "해킹", sort_order: 99 }) })).status >= 400);
+  for (const t of ["activities", "user_hobbies", "hobby_bookmarks"]) {
+    const r = await rest(`${t}?select=*`);
+    check(`비회원은 ${t} 조회 불가(0건)`, (r.body ?? []).length === 0);
+  }
+  check("비회원은 기록·북마크 쓰기 불가", (await rest("activities", null, { method: "POST", body: JSON.stringify({ hobby_id: 1, activity_date: "2026-10-25", title: "x", content: "x" }) })).status >= 400 && (await rest("hobby_bookmarks", null, { method: "POST", body: JSON.stringify({ hobby_id: 1 }) })).status >= 400);
+  check("비회원은 사진 버킷 접근 불가", (await fetch(`${URL_}/storage/v1/object/list/activity-photos`, { method: "POST", headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ prefix: "", limit: 5 }) }).then((r) => r.json())).length === 0);
   check("비로그인은 기록 조회 불가", ((await rest("activities?select=id")).body ?? []).length === 0);
 } finally {
   await deleteTestUsers();

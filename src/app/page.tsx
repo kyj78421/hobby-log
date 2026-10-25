@@ -48,12 +48,20 @@ async function HomeContent() {
           <br />
           흩어져 있던 취미의 순간을 한곳에 모아보세요.
         </p>
-        <Link
-          href="/signup"
-          className="mt-8 inline-block rounded-[14px] bg-primary-700 px-6 py-3.5 text-[15px] font-semibold text-white hover:bg-primary-600"
-        >
-          내 첫 기록 시작하기
-        </Link>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link
+            href="/signup"
+            className="inline-block rounded-[14px] bg-primary-700 px-6 py-3.5 text-[15px] font-semibold text-white hover:bg-primary-600"
+          >
+            내 첫 기록 시작하기
+          </Link>
+          <Link
+            href="/hobbies"
+            className="inline-block rounded-[14px] border border-primary-500 bg-warmNeutral-0/60 px-6 py-3.5 text-[15px] font-semibold text-primary-800 hover:bg-warmNeutral-0"
+          >
+            취미 둘러보기
+          </Link>
+        </div>
       </section>
     );
   }

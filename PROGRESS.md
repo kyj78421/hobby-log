@@ -44,6 +44,11 @@
 - **정리 완료(10/25)**: 사용자가 일반 브라우저에서 테스트 기록을 삭제 → DB 확인: 기록 2건(실제 기록만), Storage 객체 2개, 고아 객체 0, 사용자 1명. 앱의 삭제 흐름(기록 삭제 + 사진 파일 정리)이 Preview에서 정상 동작함(수동 확인)
 - Supabase Redirect URL 등록은 사용자 완료. Auth 설정 조회는 토큰 권한 부족(403)으로 확인 불가
 
+## 비회원 취미 탐색 (10/25, 중급 요구사항 보완)
+- DB: `hobby_categories`·`hobbies`에 `anon` SELECT 정책만 추가(`20261025040000_public_hobby_reference.sql`). 쓰기 정책 없음, 다른 테이블 권한 불변
+- UI: 공개 `/hobbies`(대분류 9·세부 취미 33, `?category=` 필터, 비회원은 로그인 안내/회원은 북마크 링크), 랜딩에 "취미 둘러보기" 링크
+- 검증: `rls-test.mjs` 전체 통과(비회원 9·33건 조회, 쓰기 불가, activities·user_hobbies·hobby_bookmarks·사진 버킷 접근 불가, 회원도 취미 쓰기 불가), 로컬(375px): 비회원 33개·필터(창작·공예 5개)·가로 스크롤 없음, 비회원의 북마크·마이페이지·기록·캘린더 접근은 로그인으로 이동, 회원 북마크 추가·유지 회귀 통과
+
 ## 중급 필수 기능: 취미 북마크 + 카테고리별 통계 (10/25)
 - DB: `hobby_bookmarks(user_id, hobby_id)` PK 중복 방지, RLS 3정책 (`supabase/migrations/20261025030000_hobby_bookmarks.sql`, 적용 완료)
 - UI: `/bookmarks`(세부 취미 칩 토글, 대분류별 개수), 마이페이지 "북마크 통계"(전체 수·대분류별 막대, Empty/Loading/Error), 비회원은 로그인으로 이동
