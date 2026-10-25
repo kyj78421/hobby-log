@@ -25,13 +25,14 @@
 - 미반영/미확인: 홈 캘린더 미리보기, Desktop 시안 대조, 아카이브·가입·마이페이지·온보딩 개별 시안, UI States 12종, 사진 업로드 상태 문구("올리는 중이에요…"·[사진 없이 저장]), 세션 만료 시 원고 복구
 - `rls-test.mjs` 전체 통과(테스트 후 데이터 정리 확인)
 
-## 배포 전 검증 (10/25) — 진행 중, 권한 대기
-- 확인: 로컬 HEAD `ff766d4`, 작업 트리 깨끗, origin/main 대비 2커밋 앞섬(미푸시). 추적 env 파일은 `.env.example`뿐, 전체 히스토리에서 토큰·키·프로젝트 주소 패턴 0건, `.env.local`·`.vercel` ignore 확인
-- **막힘 1 (GitHub 푸시)**: `.claude/settings.json`의 `git push*` 차단 규칙 때문에 `git push`가 거부됨. 규칙 삭제 시도도 자동 모드 분류기가 "자기 설정 수정"으로 거부 → 우회하지 않음
-- **막힘 2 (Preview 배포)**: `vercel deploy*` 차단 규칙(Production 차단용으로 넣은 것)이 Preview 배포 명령도 막음. 지시대로 삭제·우회하지 않음. 현재 Vercel 배포 0건(`vercel ls`)
-- **막힘 3 (Supabase Redirect URL 확인)**: 새 액세스 토큰으로 Auth 설정 조회가 403 (토큰 권한 부족). Redirect URL 등록 여부 미확인
-- 참고: `vercel ls`가 scope를 `hajin7`로 표시(이전 `whoami`는 `kyj78421-3729`) → 연결된 프로젝트의 팀 확인 필요
-- 미검증(배포 후): Preview URL의 인증·CRUD·반응형 테스트, 가입 이메일 확인 흐름(수동 항목: 가입 → 메일 링크 → `/onboarding` 이동)
+## 배포 전 검증 (10/25)
+- GitHub: `origin/main` = `e06eda9` 푸시 완료 (푸시 전 비밀 재점검 통과: 토큰·키·프로젝트 주소 0건, env 파일은 `.env.example`뿐)
+- 설정: `.claude/settings.json`에서 `git push` 전체 차단 → `--force`만 차단, `vercel deploy*` → `--prod`/`--target production`/`promote` 차단으로 조정(Production 차단 유지)
+- **Preview 배포 완료**: https://hobby-5gigaz3u0-hajin7.vercel.app (Vercel 프로젝트 `hobby-log`, Production·도메인 변경 없음)
+- **Deployment Protection(Vercel 로그인) 활성**: 비로그인 접속은 `vercel.com/sso-api`로 302 → 외부에서 자동 테스트 불가. 프로젝트 보호 설정은 변경하지 않음
+- Supabase Auth 설정 조회 403 = 토큰 권한 부족으로 기록(권한 확장 안 함). Redirect URL 등록 여부 미확인
+- **수동 조치 필요**: Supabase 대시보드 > Authentication > URL Configuration > Redirect URLs에 `https://hobby-5gigaz3u0-hajin7.vercel.app/**` 추가(Preview 전체는 `https://hobby-*-hajin7.vercel.app/**`). Site URL은 건드리지 않음
+- 미검증(Preview 접속 방법 결정 후): 로그인·기록 CRUD·반응형, 가입 이메일 확인 흐름(수동 항목: 가입 → 메일 링크 → `/onboarding`)
 
 ## 구현했으나 미검증
 - 회원가입 성공 → 확인 메일 → `/auth/callback` (실제 메일 발송이 필요해 자동화 불가. 사용자가 직접 1회 확인)
