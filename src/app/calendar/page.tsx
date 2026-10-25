@@ -85,7 +85,10 @@ async function Calendar({ searchParams }: { searchParams: SearchParams }) {
           </div>
         </div>
 
-        <table data-calendar className="w-full table-fixed border-separate border-spacing-1">
+        <table
+          data-calendar
+          className="w-full table-fixed border-separate border-spacing-1 max-[359px]:-mx-3.5 max-[359px]:w-[calc(100%+28px)] max-[359px]:border-spacing-0"
+        >
           <thead>
             <tr>
               {WEEKDAYS.map((d) => (
