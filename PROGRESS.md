@@ -44,6 +44,12 @@
 - **정리 완료(10/25)**: 사용자가 일반 브라우저에서 테스트 기록을 삭제 → DB 확인: 기록 2건(실제 기록만), Storage 객체 2개, 고아 객체 0, 사용자 1명. 앱의 삭제 흐름(기록 삭제 + 사진 파일 정리)이 Preview에서 정상 동작함(수동 확인)
 - Supabase Redirect URL 등록은 사용자 완료. Auth 설정 조회는 토큰 권한 부족(403)으로 확인 불가
 
+## 중급 필수 기능: 취미 북마크 + 카테고리별 통계 (10/25)
+- DB: `hobby_bookmarks(user_id, hobby_id)` PK 중복 방지, RLS 3정책 (`supabase/migrations/20261025030000_hobby_bookmarks.sql`, 적용 완료)
+- UI: `/bookmarks`(세부 취미 칩 토글, 대분류별 개수), 마이페이지 "북마크 통계"(전체 수·대분류별 막대, Empty/Loading/Error), 비회원은 로그인으로 이동
+- 검증: `node scripts/rls-test.mjs` 북마크 항목 포함 전체 통과(중복·타 계정·사칭·비로그인·집계 합계), 로컬 UI(추가→통계 3개 일치, 해제→2개, 로그아웃 후 접근 차단, 재로그인 후 유지, 타 계정 북마크 비노출), 기록 CRUD·사진·캘린더 회귀 통과
+- 관심 취미(`user_hobbies`)와는 별도 테이블·목적(관심=프로필 선호, 북마크=즐겨찾기+통계)
+
 ## Production 배포 (10/25) — 완료
 - GitHub: https://github.com/kyj78421/hobby-log (`main` = `ce1d459` 푸시, 푸시 전 비밀 재점검 통과)
 - **Production 공개 URL: https://hobby-log-sigma.vercel.app** (공개 접속 가능). `hobby-log-hajin7.vercel.app`, 배포별 URL은 Vercel 로그인 보호가 걸려 있음

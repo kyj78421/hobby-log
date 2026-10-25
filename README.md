@@ -10,6 +10,7 @@
 - 아카이브: 카테고리 필터, 날짜 정렬, 빈 상태 안내
 - 감정 이모지(8종)·만족도(1~5점)·사진 1장(JPG/PNG/WebP, 5MB 이하)
 - 월간 취미 캘린더(날짜별 기록·감정 표시)
+- 취미 북마크(`/bookmarks`)와 마이페이지의 대분류별 북마크 통계
 - 관심 취미 설정(온보딩/마이페이지), 홈 대시보드, 마이페이지
 - 사용자별 데이터 분리 (Supabase Row Level Security)
 
@@ -38,7 +39,7 @@ npm run dev                  # http://localhost:3000
 ## 데이터베이스
 
 `supabase/migrations/`의 SQL을 순서대로 Supabase SQL Editor에서 실행합니다.
-(스키마·RLS 정책·카테고리 시드, 사진 Storage 버킷, 관심 취미)
+(스키마·RLS 정책·카테고리 시드, 사진 Storage 버킷, 관심 취미, 취미 북마크)
 
 Supabase 대시보드 Authentication > URL Configuration에 Site URL과 Redirect URLs(`<배포 주소>/**`, `http://localhost:3000/**`)를 등록해야 가입 확인 메일 링크가 동작합니다.
 

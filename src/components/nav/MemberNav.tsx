@@ -17,7 +17,8 @@ const ITEMS = [
     href: "/mypage",
     label: "마이",
     sidebarLabel: "마이페이지",
-    match: (p: string) => p.startsWith("/mypage") || p.startsWith("/onboarding"),
+    match: (p: string) =>
+      p.startsWith("/mypage") || p.startsWith("/onboarding") || p.startsWith("/bookmarks"),
   },
 ];
 

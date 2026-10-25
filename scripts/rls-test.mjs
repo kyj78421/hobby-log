@@ -53,6 +53,21 @@ try {
   check("존재하지 않는 취미 id 거부", (await rpc(ta, [9999])).status >= 400 && (await rest("user_hobbies?select=hobby_id", ta)).body.length === 1);
   check("비로그인은 rpc 실행 불가", (await rpc(KEY, [1])).status >= 400);
   check("A 관심 취미 비우기", (await rpc(ta, [])).status === 204 && (await rest("user_hobbies?select=hobby_id", ta)).body.length === 0);
+  // 취미 북마크
+  const bm = (token, hobbyId, prefer = "return=minimal") => rest("hobby_bookmarks", token, { method: "POST", headers: { Prefer: prefer }, body: JSON.stringify({ hobby_id: hobbyId }) });
+  check("A 북마크 추가", (await bm(ta, 1)).status === 201);
+  check("같은 북마크 중복 추가 거부(PK)", (await bm(ta, 1)).status === 409);
+  check("upsert(ignore-duplicates)는 오류 없이 중복 무시", (await rest("hobby_bookmarks?on_conflict=user_id,hobby_id", ta, { method: "POST", headers: { Prefer: "resolution=ignore-duplicates,return=minimal" }, body: JSON.stringify({ hobby_id: 1 }) })).status === 201);
+  check("A 북마크 추가(다른 대분류 포함)", (await bm(ta, 2)).status === 201 && (await bm(ta, 12)).status === 201);
+  check("A는 본인 북마크 3개 조회(중복 없음)", (await rest("hobby_bookmarks?select=hobby_id", ta)).body.length === 3);
+  check("B는 A 북마크 조회 불가", (await rest("hobby_bookmarks?select=hobby_id", tb)).body.length === 0);
+  check("B는 A 명의로 북마크 추가 불가", (await rest("hobby_bookmarks", tb, { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ user_id: uidA, hobby_id: 3 }) })).status >= 400);
+  check("B는 A 북마크 삭제 불가(건수 유지)", ((await rest("hobby_bookmarks?hobby_id=eq.1", tb, { method: "DELETE" })).body ?? []).length === 0 && (await rest("hobby_bookmarks?select=hobby_id", ta)).body.length === 3);
+  check("존재하지 않는 취미 북마크 거부", (await bm(ta, 9999)).status >= 400);
+  check("비로그인은 북마크 조회·추가 불가", ((await rest("hobby_bookmarks?select=hobby_id")).body ?? []).length === 0 && (await bm(null, 1)).status >= 400);
+  const stat = await sql(`select c.name, count(*)::int n from public.hobby_bookmarks b join public.hobbies h on h.id=b.hobby_id join public.hobby_categories c on c.id=h.category_id where b.user_id='${uidA}' group by c.name order by c.name`);
+  check("대분류별 집계 합계 = 전체 북마크 수", stat.reduce((a, r) => a + r.n, 0) === 3 && stat.length === 2, JSON.stringify(stat));
+  check("A 북마크 해제 후 2개", (await rest("hobby_bookmarks?hobby_id=eq.1", ta, { method: "DELETE" })).status === 200 && (await rest("hobby_bookmarks?select=hobby_id", ta)).body.length === 2);
   check("비로그인은 기록 조회 불가", ((await rest("activities?select=id")).body ?? []).length === 0);
 } finally {
   await deleteTestUsers();
