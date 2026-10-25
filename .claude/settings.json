@@ -16,12 +16,15 @@
     ],
     "deny": [
       "Read(./.env*)",
-      "Bash(git push*)",
+      "Bash(git push --force*)",
       "Bash(git reset --hard*)",
       "Bash(git clean*)",
       "Bash(rm -rf*)",
-      "Bash(vercel deploy*)",
+      "Bash(vercel deploy --prod*)",
       "Bash(vercel --prod*)",
+      "Bash(vercel promote*)",
+      "Bash(vercel * --prod*)",
+      "Bash(vercel * --target*production*)",
       "Bash(supabase db reset*)"
     ]
   },
