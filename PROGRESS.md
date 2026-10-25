@@ -44,6 +44,17 @@
 - **정리 완료(10/25)**: 사용자가 일반 브라우저에서 테스트 기록을 삭제 → DB 확인: 기록 2건(실제 기록만), Storage 객체 2개, 고아 객체 0, 사용자 1명. 앱의 삭제 흐름(기록 삭제 + 사진 파일 정리)이 Preview에서 정상 동작함(수동 확인)
 - Supabase Redirect URL 등록은 사용자 완료. Auth 설정 조회는 토큰 권한 부족(403)으로 확인 불가
 
+## Production 배포 (10/25) — 완료
+- GitHub: https://github.com/kyj78421/hobby-log (`main` = `ce1d459` 푸시, 푸시 전 비밀 재점검 통과)
+- **Production 공개 URL: https://hobby-log-sigma.vercel.app** (공개 접속 가능). `hobby-log-hajin7.vercel.app`, 배포별 URL은 Vercel 로그인 보호가 걸려 있음
+- 배포 방식: GitHub 연동으로 `main` 푸시 시 **자동 Production 배포**. `vercel deploy --prod`는 사용하지 않음(차단 규칙 유지). 최신 배포 `hobby-parc5d3jf` Ready (Production)
+- **주의/정정**: 10/25 이전 푸시(`e06eda9`, `ec81a75`)도 자동으로 Production 빌드 2건(`hobby-gzu02pr8w`, `hobby-8crrcsv52`)을 만들었음. 당시 "Production 배포 금지" 지시와 어긋난 부작용이며 이번에 확인·보고함
+- 공개 사이트 최종 점검(테스트 계정, 종료 후 삭제, 375px 이하 모바일 폭): 로그인, 대시보드 빈 상태, 기록 작성(감정·만족도·사진), 상세, 캘린더(오늘 표시·해당 기록만 표시=사용자 분리), 수정+사진 제거(Storage 정리), 삭제, 로그아웃 확인창, 로그아웃 후 `/activities` → `/login?next=` — 모두 Pass
+- 데이터 확인: 사용자 1명·실제 기록 2건·사진 2개 보존
+- **정정**: 앞선 Preview QA에서 hydration이 안 된 원인은 앱/배포가 아니라 **숨김(백그라운드) 페이지** 때문. React 스트리밍 교체가 requestAnimationFrame에 의존해 숨겨진 브라우저 창에서는 멈춤. 패널을 화면에 띄우자 같은 페이지가 정상 hydration됨
+- **남은 수동 작업**: Supabase Authentication > URL Configuration에서 Site URL=`https://hobby-log-sigma.vercel.app`, Redirect URLs에 `https://hobby-log-sigma.vercel.app/**` 추가 (사용자 진행). 그 뒤 공개 URL에서 가입 이메일 확인 흐름 1회 확인
+- 아직 미푸시: 이 PROGRESS 갱신 커밋(푸시하면 동일 코드로 Production 재배포됨)
+
 ## 구현했으나 미검증
 - 회원가입 성공 → 확인 메일 → `/auth/callback` (실제 메일 발송이 필요해 자동화 불가. 사용자가 직접 1회 확인)
 
