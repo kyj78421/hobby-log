@@ -34,6 +34,14 @@
 - **수동 조치 필요**: Supabase 대시보드 > Authentication > URL Configuration > Redirect URLs에 `https://hobby-5gigaz3u0-hajin7.vercel.app/**` 추가(Preview 전체는 `https://hobby-*-hajin7.vercel.app/**`). Site URL은 건드리지 않음
 - 미검증(Preview 접속 방법 결정 후): 로그인·기록 CRUD·반응형, 가입 이메일 확인 흐름(수동 항목: 가입 → 메일 링크 → `/onboarding`)
 
+## Preview QA (10/25, Claude in Chrome — 사용자 실제 계정으로 로그인된 세션)
+- Preview: https://hobby-5gigaz3u0-hajin7.vercel.app (Production 아님). 기존 실제 기록 2건("두개", "아카이브")은 열람만 했고 수정·삭제 없음
+- **Pass (서버 렌더링 결과 기준)**: 로그인 세션 유지 대시보드(전체 2회·이번 달 2회), 아카이브(목록 3건·사진 3장 로드·메타 `2026.10.25 · 스포츠 / 운동 / 러닝`·같은 날 최신 우선), 캘린더(10/21 1건·10/25 2건·오늘 표시·선택일 목록), 기록 작성(테스트 기록 저장 → 상세 + "기록을 저장했어요." 토스트, 감정·만족도·사진 표시, Storage 업로드), 기록 수정(제목 변경 DB 반영·폼 값 복원)
+- **Fail/보류 (환경 문제로 판정)**: 이 Chrome에서는 클라이언트 hydration이 완료되지 않음 — Suspense 경계 내용이 `div#S:n[hidden]`에 남고 입력 요소에 React 속성이 없음. 같은 Chrome에서 `localhost:3100`도 동일하게 실패, 내장 브라우저에서는 같은 빌드가 정상 hydration → 앱/배포 결함이 아니라 이 Chrome(확장 연결 프로필) 환경 문제로 보임(원인 미확정). 그래서 사진 제거·로그아웃 확인창·삭제·반응형 폭 전환 등 클릭 상호작용은 Preview에서 검증하지 못함
+- Not Tested(Preview): 로그아웃, 기록 삭제, 사진 제거/교체, 캘린더 방향키, 375/320px 폭(창 크기 변경이 적용되지 않아 824px만 확인: 하단 탭 표시·사이드바 없음·가로 스크롤 없음). 로컬 빌드에서는 위 항목 모두 Pass(위 기록 참조)
+- **정리 필요 데이터**: 테스트 기록 `QA 테스트 A 수정됨 (삭제 예정)`(id c2ea3d9b-b1ef-45df-8d75-836fb52f8cad, 사진 1장 포함) 1건이 사용자 계정에 남아 있음 → 일반 브라우저에서 해당 기록 → [삭제하기]로 삭제(사진 파일도 함께 정리됨)
+- Supabase Redirect URL 등록은 사용자 완료. Auth 설정 조회는 토큰 권한 부족(403)으로 확인 불가
+
 ## 구현했으나 미검증
 - 회원가입 성공 → 확인 메일 → `/auth/callback` (실제 메일 발송이 필요해 자동화 불가. 사용자가 직접 1회 확인)
 
