@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { logout } from "@/app/(auth)/actions";
+import { clearSavedSession } from "@/lib/saved-session";
 
 function Confirm() {
   const { pending } = useFormStatus();
@@ -33,7 +34,12 @@ export function LogoutButton({ className }: { className?: string }) {
         <h2 id="logout-title" className="text-lg font-bold text-warmNeutral-900">
           로그아웃할까요?
         </h2>
-        <form action={logout} className="mt-6 flex justify-end gap-3">
+        <form
+          action={logout}
+          // 로그아웃하면 기기에 보관한 세션도 지운다 (지우지 않으면 다시 복원돼 버린다).
+          onSubmit={() => clearSavedSession()}
+          className="mt-6 flex justify-end gap-3"
+        >
           <button
             type="button"
             autoFocus

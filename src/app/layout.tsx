@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SessionKeeper } from "@/components/auth/SessionKeeper";
 import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
@@ -32,6 +34,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full">
+        <Suspense fallback={null}>
+          <SessionKeeper />
+        </Suspense>
         <div className="flex min-h-screen flex-col">
           <SiteHeader />
           <div className="app-content flex flex-1 flex-col">{children}</div>

@@ -108,6 +108,20 @@ export async function login(
   redirect(next);
 }
 
+// 쿠키가 사라진 기기(예: iOS 홈 화면 앱)에서 저장해 둔 갱신 토큰으로 세션을 되살린다.
+// 서버가 직접 쿠키(Set-Cookie)를 다시 발급하므로 브라우저 JS가 쿠키를 쓰지 않는다.
+export async function restoreSession(
+  refreshToken: string,
+): Promise<{ ok: boolean; refreshToken?: string }> {
+  if (typeof refreshToken !== "string" || refreshToken.length < 8 || refreshToken.length > 512) {
+    return { ok: false };
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
+  if (error || !data.session) return { ok: false };
+  return { ok: true, refreshToken: data.session.refresh_token };
+}
+
 export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
