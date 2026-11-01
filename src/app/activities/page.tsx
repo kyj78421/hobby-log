@@ -68,6 +68,9 @@ async function Archive({ searchParams }: { searchParams: SearchParams }) {
             {filtered ? "조건에 맞는 기록" : "전체 기록"} {activities.length}개
           </p>
         </div>
+        <Link href="/calendar" className="text-sm font-semibold text-primary-700 underline">
+          캘린더로 보기
+        </Link>
         <Link
           href="/activities/new"
           className="rounded-[14px] bg-primary-700 px-5 py-3 text-[15px] font-semibold text-white hover:bg-primary-600"
