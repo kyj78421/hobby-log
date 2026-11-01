@@ -40,6 +40,7 @@ async function EditForm({ params }: { params: Promise<{ id: string }> }) {
         emotion: activity.emotion ?? "",
         satisfaction: activity.satisfaction ? String(activity.satisfaction) : "",
       }}
+      currentHobby={{ id: activity.hobby.id, name: activity.hobby.name, categoryId: activity.hobby.category.id }}
       existingPhotoUrl={photoUrl}
       submitLabel="기록 저장하기"
       pendingLabel="저장 중…"

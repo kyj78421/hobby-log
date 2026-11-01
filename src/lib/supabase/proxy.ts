@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // 로그인한 회원만 접근할 수 있는 경로 (IA 기준: 회원 전용 영역)
-const PROTECTED_PREFIXES = ["/calendar", "/activities", "/mypage", "/onboarding", "/bookmarks"];
+const PROTECTED_PREFIXES = ["/calendar", "/activities", "/mypage", "/onboarding", "/bookmarks", "/my-hobbies"];
 // 로그인 상태에서는 들어갈 필요가 없는 경로 (UC-01 A2)
 const GUEST_ONLY_PATHS = ["/login", "/signup"];
 

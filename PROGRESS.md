@@ -88,6 +88,14 @@
 - **남은 수동 작업**: Supabase Authentication > URL Configuration에서 Site URL=`https://hobby-log-sigma.vercel.app`, Redirect URLs에 `https://hobby-log-sigma.vercel.app/**` 추가 (사용자 진행). 그 뒤 공개 URL에서 가입 이메일 확인 흐름 1회 확인
 - 아직 미푸시: 이 PROGRESS 갱신 커밋(푸시하면 동일 코드로 Production 재배포됨)
 
+## 카테고리 구조 개편·사용자 지정 취미 (11/02)
+- DB(운영 적용 완료, 마이그레이션 `20261102000000_category_restructure_custom_hobbies.sql`): 대분류 ID 1~9 유지·이름/순서 변경, `hobby_category_links`(취미↔대분류 N:M, 대표 분류는 `hobbies.category_id`), `hobbies.owner_id`(개인 취미)·`archived_at`(보관), 취미 유일 인덱스 교체, RLS(기본 취미 읽기 전용·개인 취미 본인만), 선택 가능 취미 검사 트리거, RPC `create/update/delete_my_hobby`.
+- 기존 취미 33개 ID 유지(이름 변경 11, 분류 이동 2, 여행·커피·수집·기타 4개는 삭제 없이 보관). 새 취미 41개 추가. 기록·관심 취미·북마크 참조는 백업(`backup_20261102_*`)과 일치함을 확인.
+- 중복 노출: 독서(문화·학습), 사진 촬영(창작·여행), 베이킹(맛집·창작). 북마크 통계는 연결된 각 대분류에 한 번씩 세고, 전체는 취미 기준 중복 없이 센다.
+- 화면: 대분류 3열 카드+취미 칩(`CategoryGrid`)을 취미 둘러보기·온보딩·기록 작성/수정·북마크에 공통 적용, `/my-hobbies`(내 취미 등록·수정·삭제, 기록이 있으면 보관).
+- 주의: PostgREST가 `hobbies`→`hobby_categories` 관계를 직접 FK와 연결 테이블 두 가지로 보므로 임베드에 FK 힌트(`hobby_categories!hobbies_category_id_fkey`)가 필요하다.
+- 정리 대기: 백업 테이블 `public.backup_20261102_*` 3개(RLS 켜짐·정책 없음). 확인 후 삭제 가능.
+
 ## 구현했으나 미검증
 - 회원가입 성공 → 확인 메일 → `/auth/callback` (실제 메일 발송이 필요해 자동화 불가. 사용자가 직접 1회 확인)
 

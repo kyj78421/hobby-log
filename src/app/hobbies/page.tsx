@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { BlockSkeleton } from "@/components/Skeleton";
+import { HobbyExplorer } from "@/components/hobbies/HobbyExplorer";
 import { getCategories } from "@/lib/activities";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -20,8 +21,6 @@ export default function HobbiesPage({ searchParams }: { searchParams: SearchPara
   );
 }
 
-const href = (category?: number) => (category ? `/hobbies?category=${category}` : "/hobbies");
-
 async function Browse({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   let categories;
@@ -39,57 +38,16 @@ async function Browse({ searchParams }: { searchParams: SearchParams }) {
   }
   const user = await getCurrentUser();
 
-  const selected = categories.find((c) => String(c.id) === sp.category);
-  const shown = selected ? [selected] : categories;
-  const hobbyCount = shown.reduce((n, c) => n + c.hobbies.length, 0);
-  const chip = (active: boolean) =>
-    `rounded-full border px-4 py-2 text-sm font-medium ${
-      active
-        ? "border-primary-500 bg-primary-200 text-primary-800"
-        : "border-warmNeutral-200 bg-warmNeutral-0 text-warmNeutral-700 hover:bg-warmNeutral-100"
-    }`;
+  const initial = categories.find((c) => String(c.id) === sp.category)?.id ?? null;
+  const total = new Set(categories.flatMap((c) => c.hobbies.map((h) => h.id))).size;
 
   return (
     <>
       <p className="mt-2 text-warmNeutral-700">
-        {selected ? selected.name : "전체"} · 세부 취미 <strong>{hobbyCount}</strong>개
+        대분류 <strong>{categories.length}</strong>개 · 취미 <strong>{total}</strong>개
       </p>
 
-      <nav aria-label="취미 분류" className="mt-6 flex flex-wrap gap-2">
-        <Link href={href()} className={chip(!selected)} aria-current={!selected ? "true" : undefined}>
-          전체
-        </Link>
-        {categories.map((c) => (
-          <Link
-            key={c.id}
-            href={href(c.id)}
-            className={chip(selected?.id === c.id)}
-            aria-current={selected?.id === c.id ? "true" : undefined}
-          >
-            {c.name}
-          </Link>
-        ))}
-      </nav>
-
-      <div className="mt-8 space-y-8">
-        {shown.map((c) => (
-          <section key={c.id} aria-labelledby={`cat-${c.id}`}>
-            <h2 id={`cat-${c.id}`} className="mb-3 text-lg font-bold text-primary-900">
-              {c.name} <span className="text-sm font-medium text-warmNeutral-500">{c.hobbies.length}개</span>
-            </h2>
-            <ul className="flex flex-wrap gap-2">
-              {c.hobbies.map((h) => (
-                <li
-                  key={h.id}
-                  className="min-h-11 rounded-full border border-warmNeutral-200 bg-warmNeutral-0 px-4 py-2.5 text-sm font-medium text-warmNeutral-700"
-                >
-                  {h.name}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
+      <HobbyExplorer categories={categories} initialCategoryId={initial} canAdd={!!user} />
 
       <section className="mt-12 rounded-[20px] bg-primary-100 px-6 py-6">
         {user ? (

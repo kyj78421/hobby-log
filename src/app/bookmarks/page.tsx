@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { BookmarkChip } from "@/components/BookmarkChip";
+import { BookmarkExplorer } from "@/components/hobbies/BookmarkExplorer";
 import { BlockSkeleton } from "@/components/Skeleton";
 import { getCategories } from "@/lib/activities";
 import { requireUser } from "@/lib/auth";
@@ -43,7 +43,6 @@ async function Manager() {
   }
 
   const stats = buildBookmarkStats(categories, ids);
-  const active = new Set(ids);
 
   return (
     <div className="space-y-8">
@@ -52,21 +51,12 @@ async function Manager() {
           ? "아직 북마크한 취미가 없어요. 아래에서 취미를 골라 보세요."
           : `북마크한 취미 ${stats.total}개`}
       </p>
-      {categories.map((c) => {
-        const count = stats.byCategory.find((s) => s.id === c.id)?.count ?? 0;
-        return (
-          <section key={c.id} aria-labelledby={`cat-${c.id}`}>
-            <h2 id={`cat-${c.id}`} className="mb-3 text-lg font-bold text-primary-900">
-              {c.name} <span className="text-sm font-medium text-warmNeutral-500">{count}개</span>
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {c.hobbies.map((h) => (
-                <BookmarkChip key={h.id} hobbyId={h.id} name={h.name} active={active.has(h.id)} />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+      <BookmarkExplorer categories={categories} bookmarkedIds={ids} />
+      {stats.byCategory.some((c) => c.count > 0) && (
+        <p className="text-sm text-warmNeutral-500">
+          한 취미가 여러 대분류에 속하면 각 대분류에 함께 세어져요. 전체 개수는 중복 없이 계산해요.
+        </p>
+      )}
     </div>
   );
 }

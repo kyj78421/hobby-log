@@ -5,6 +5,8 @@ import { useActionState, useEffect, useRef, useState, useTransition } from "reac
 import type { ActivityFormState } from "@/app/activities/actions";
 import type { Category } from "@/lib/activities";
 import { FormError } from "@/components/auth/fields";
+import { CategoryGrid, hobbyChipClass } from "@/components/hobbies/CategoryGrid";
+import { AddHobbyButton } from "@/components/hobbies/HobbyFormDialog";
 import { EMOTIONS } from "@/lib/emotions";
 import { PHOTO_TYPES, validatePhoto } from "@/lib/photos";
 
@@ -55,6 +57,7 @@ export function ActivityForm({
   submitLabel,
   pendingLabel,
   cancelHref,
+  currentHobby,
 }: {
   action: (prev: ActivityFormState, formData: FormData) => Promise<ActivityFormState>;
   categories: Category[];
@@ -63,15 +66,20 @@ export function ActivityForm({
   submitLabel: string;
   pendingLabel: string;
   cancelHref: string;
+  currentHobby?: { id: number; name: string; categoryId: number };
 }) {
   const [state, formAction, isPending] = useActionState<ActivityFormState, FormData>(action, {});
   const [, startTransition] = useTransition();
-  const initialCategory =
-    categories.find((c) => c.hobbies.some((h) => String(h.id) === initial.hobby_id))?.id ?? "";
+  // 한 취미가 여러 대분류에 있을 수 있으므로 기록의 대표 분류를 우선하고, 없으면 연결된 첫 분류를 쓴다.
+  const initialCategory: number | null =
+    categories.find((c) => c.id === currentHobby?.categoryId && c.hobbies.some((h) => String(h.id) === initial.hobby_id))?.id ??
+    categories.find((c) => c.hobbies.some((h) => String(h.id) === initial.hobby_id))?.id ??
+    currentHobby?.categoryId ??
+    null;
 
   // 저장에 실패해도 입력한 값이 사라지지 않도록 모든 입력을 상태로 관리한다.
   const [date, setDate] = useState(initial.activity_date);
-  const [categoryId, setCategoryId] = useState(String(initialCategory));
+  const [categoryId, setCategoryId] = useState<number | null>(initialCategory);
   const [hobbyId, setHobbyId] = useState(initial.hobby_id);
   const [title, setTitle] = useState(initial.title);
   const [content, setContent] = useState(initial.content);
@@ -143,7 +151,14 @@ export function ActivityForm({
 
   const errors = { ...state.fieldErrors, ...(photoError ? { photo: photoError } : {}) };
   const shownPhoto = previewUrl ?? (removeExisting ? null : (existingPhotoUrl ?? null));
-  const hobbies = categories.find((c) => String(c.id) === categoryId)?.hobbies ?? [];
+  const currentCategory = categories.find((c) => c.id === categoryId);
+  // 보관되어 선택지에서 빠진 취미라도, 그 취미로 쓴 기록을 수정할 때는 현재 선택으로 보여 준다.
+  const hobbies = [
+    ...(currentCategory?.hobbies ?? []),
+    ...(currentHobby && currentHobby.categoryId === categoryId && !currentCategory?.hobbies.some((h) => h.id === currentHobby.id)
+      ? [{ id: currentHobby.id, name: `${currentHobby.name} (보관됨)`, own: false }]
+      : []),
+  ];
   const border = (key: keyof typeof errors) =>
     errors[key] ? "border-error" : "border-warmNeutral-200";
 
@@ -165,48 +180,66 @@ export function ActivityForm({
         />
       </Field>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field id="category_id" label="취미 분류" error={errors.category_id}>
-          <select
-            id="category_id"
-            name="category_id"
-            value={categoryId}
-            onChange={(e) => {
-              setCategoryId(e.target.value);
-              setHobbyId("");
-            }}
-            aria-invalid={!!errors.category_id}
-            aria-describedby={errors.category_id ? "category_id-error" : undefined}
-            className={`${controlClass} ${border("category_id")}`}
-          >
-            <option value="">분류를 선택해 주세요</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field id="hobby_id" label="세부 취미" error={errors.hobby_id}>
-          <select
-            id="hobby_id"
-            name="hobby_id"
-            value={hobbyId}
-            onChange={(e) => setHobbyId(e.target.value)}
-            disabled={!categoryId}
-            aria-invalid={!!errors.hobby_id}
-            aria-describedby={errors.hobby_id ? "hobby_id-error" : undefined}
-            className={`${controlClass} ${border("hobby_id")} disabled:bg-warmNeutral-100`}
-          >
-            <option value="">{categoryId ? "세부 취미를 선택해 주세요" : "분류를 먼저 선택해 주세요"}</option>
-            {hobbies.map((h) => (
-              <option key={h.id} value={h.id}>
-                {h.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium text-warmNeutral-900">
+          취미 분류 <span className="text-error" aria-label="필수">*</span>
+        </legend>
+        <input type="hidden" name="category_id" value={categoryId ?? ""} />
+        <input type="hidden" name="hobby_id" value={hobbyId} />
+        <CategoryGrid
+          categories={categories}
+          value={categoryId}
+          onChange={(id) => {
+            // 같은 취미가 연결된 대분류로 옮겨 가면 선택을 유지하고, 아니면 취미를 다시 고르게 한다.
+            setCategoryId(id);
+            const next = categories.find((c) => c.id === id);
+            if (!next?.hobbies.some((h) => String(h.id) === hobbyId)) setHobbyId("");
+          }}
+          wide
+        />
+        {errors.category_id && (
+          <p id="category_id-error" role="alert" className="mt-2 text-sm text-error">
+            {errors.category_id}
+          </p>
+        )}
+        <div className="mt-4">
+          <p className="mb-2 text-sm font-medium text-warmNeutral-900">
+            세부 취미 <span className="text-error" aria-label="필수">*</span>
+          </p>
+          {currentCategory ? (
+            <div className="flex flex-wrap gap-2" role="group" aria-label="세부 취미">
+              {hobbies.map((h) => (
+                <button
+                  key={h.id}
+                  type="button"
+                  aria-pressed={String(h.id) === hobbyId}
+                  onClick={() => setHobbyId(String(h.id))}
+                  className={hobbyChipClass(String(h.id) === hobbyId)}
+                >
+                  {String(h.id) === hobbyId && <span aria-hidden>✓ </span>}
+                  {h.name}
+                  {h.own && <span className="ml-1 text-xs text-primary-700">내 취미</span>}
+                </button>
+              ))}
+              <AddHobbyButton
+                categories={categories}
+                categoryId={categoryId}
+                onCreated={(h) => {
+                  setCategoryId(h.categoryId);
+                  setHobbyId(String(h.id));
+                }}
+              />
+            </div>
+          ) : (
+            <p className="text-sm text-warmNeutral-500">분류를 먼저 선택해 주세요.</p>
+          )}
+          {errors.hobby_id && (
+            <p id="hobby_id-error" role="alert" className="mt-2 text-sm text-error">
+              {errors.hobby_id}
+            </p>
+          )}
+        </div>
+      </fieldset>
 
       <Field id="title" label="제목" error={errors.title}>
         <input

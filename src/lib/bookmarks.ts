@@ -11,7 +11,8 @@ export async function getMyBookmarkIds(): Promise<number[]> {
 
 export type CategoryBookmarkStat = { id: number; name: string; count: number };
 
-// 대분류별 북마크 수. 합계는 항상 전체 북마크 수와 같다(같은 id 목록에서 계산).
+// 대분류별 북마크 수. 한 취미가 여러 대분류에 연결되어 있으면 연결된 각 대분류에 한 번씩 센다.
+// 그래서 대분류별 합계는 전체보다 클 수 있고, 전체(total)는 중복 없이 북마크한 취미 수다.
 export function buildBookmarkStats(categories: Category[], bookmarkedIds: number[]) {
   const ids = new Set(bookmarkedIds);
   const byCategory: CategoryBookmarkStat[] = categories.map((c) => ({

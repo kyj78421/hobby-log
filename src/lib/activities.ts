@@ -1,7 +1,8 @@
 import { PHOTO_BUCKET } from "@/lib/photos";
 import { createClient } from "@/lib/supabase/server";
 
-export type Hobby = { id: number; name: string };
+// own: 내가 직접 만든 취미 (RLS 덕분에 목록에는 기본 취미와 내 취미만 온다)
+export type Hobby = { id: number; name: string; own: boolean };
 export type Category = { id: number; name: string; hobbies: Hobby[] };
 
 export type ActivityListItem = {
@@ -20,21 +21,47 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 export const isUuid = (value: string) => UUID_PATTERN.test(value);
 
 const LIST_COLUMNS =
-  "id, title, activity_date, emotion, satisfaction, photo_path, hobby:hobbies!inner(id, name, category:hobby_categories!inner(id, name))";
+  "id, title, activity_date, emotion, satisfaction, photo_path, hobby:hobbies!inner(id, name, category:hobby_categories!hobbies_category_id_fkey!inner(id, name))";
 
+type LinkRow = {
+  sort_order: number;
+  hobby: { id: number; name: string; owner_id: string | null; archived_at: string | null };
+};
+
+// 대분류별 취미 목록. 한 취미가 여러 대분류에 연결되어 있으면 각 대분류에 모두 나온다.
+// 보관된 취미는 선택지에서 제외한다(기존 기록·표시는 영향 없음).
 export async function getCategories(): Promise<Category[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("hobby_categories")
-    .select("id, name, hobbies(id, name, sort_order)")
-    .order("sort_order")
-    .order("sort_order", { referencedTable: "hobbies" });
+    .select("id, name, links:hobby_category_links(sort_order, hobby:hobbies!inner(id, name, owner_id, archived_at))")
+    .order("sort_order");
   if (error) throw new Error("카테고리를 불러오지 못했어요.");
-  return (data ?? []).map((c) => ({
+  return ((data ?? []) as unknown as { id: number; name: string; links: LinkRow[] }[]).map((c) => ({
     id: c.id,
     name: c.name,
-    hobbies: c.hobbies.map((h) => ({ id: h.id, name: h.name })),
+    hobbies: c.links
+      .filter((l) => l.hobby.archived_at === null)
+      .sort((a, b) => a.sort_order - b.sort_order || a.hobby.id - b.hobby.id)
+      .map((l) => ({ id: l.hobby.id, name: l.hobby.name, own: l.hobby.owner_id !== null })),
   }));
+}
+
+export type MyHobby = { id: number; name: string; categoryId: number; categoryName: string };
+
+// 내가 직접 만든 취미(보관된 것 제외)
+export async function getMyCustomHobbies(): Promise<MyHobby[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("hobbies")
+    .select("id, name, category:hobby_categories!hobbies_category_id_fkey!inner(id, name)")
+    .not("owner_id", "is", null)
+    .is("archived_at", null)
+    .order("id");
+  if (error) throw new Error("내 취미를 불러오지 못했어요.");
+  return ((data ?? []) as unknown as { id: number; name: string; category: { id: number; name: string } }[]).map(
+    (h) => ({ id: h.id, name: h.name, categoryId: h.category.id, categoryName: h.category.name }),
+  );
 }
 
 export async function listActivities(options: {
@@ -49,7 +76,17 @@ export async function listActivities(options: {
     .select(LIST_COLUMNS)
     .order("activity_date", { ascending })
     .order("created_at", { ascending });
-  if (options.categoryId) query = query.eq("hobby.category_id", options.categoryId);
+  if (options.categoryId) {
+    // 그 대분류에 연결된 모든 취미의 기록 (한 취미가 여러 대분류에 속할 수 있다)
+    const { data: links, error: linkError } = await supabase
+      .from("hobby_category_links")
+      .select("hobby_id")
+      .eq("category_id", options.categoryId);
+    if (linkError) throw new Error("기록을 불러오지 못했어요.");
+    const hobbyIds = (links ?? []).map((l) => l.hobby_id as number);
+    if (hobbyIds.length === 0) return [];
+    query = query.in("hobby_id", hobbyIds);
+  }
   if (options.limit) query = query.limit(options.limit);
   const { data, error } = await query;
   if (error) throw new Error("기록을 불러오지 못했어요.");

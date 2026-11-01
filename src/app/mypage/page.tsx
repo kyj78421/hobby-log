@@ -24,7 +24,9 @@ async function Profile() {
   let hobbyNames: string[] | null = [];
   try {
     const [ids, categories] = await Promise.all([getMyHobbyIds(), getCategories()]);
-    hobbyNames = categories.flatMap((c) => c.hobbies).filter((h) => ids.includes(h.id)).map((h) => h.name);
+    // 한 취미가 여러 대분류에 있어도 한 번만 보여 준다.
+    const byId = new Map(categories.flatMap((c) => c.hobbies).map((h) => [h.id, h.name]));
+    hobbyNames = ids.filter((id) => byId.has(id)).map((id) => byId.get(id) as string);
   } catch {
     hobbyNames = null;
   }
@@ -70,18 +72,23 @@ async function Profile() {
             ))}
           </ul>
         )}
-        {hobbyNames && hobbyNames.length > 0 && (
-          <Link href="/onboarding" className="mt-4 inline-block text-sm font-semibold text-primary-700 underline">
-            관심 취미 변경
+        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-primary-700">
+          {hobbyNames && hobbyNames.length > 0 && (
+            <Link href="/onboarding" className="underline">
+              관심 취미 변경
+            </Link>
+          )}
+          <Link href="/my-hobbies" className="underline">
+            내가 만든 취미 관리
           </Link>
-        )}
+        </div>
       </section>
       <LogoutButton className="h-12 w-full rounded-[14px] border border-primary-300 bg-warmNeutral-0 text-[15px] font-semibold text-primary-700 hover:bg-primary-50" />
     </div>
   );
 }
 
-// 취미 북마크 통계: 전체 북마크 수와 대분류별 북마크 수 (합계는 항상 일치)
+// 취미 북마크 통계: 전체 북마크 수(중복 없음)와 대분류별 북마크 수(여러 대분류에 속한 취미는 각 대분류에 포함)
 async function BookmarkStats() {
   const box = "rounded-[20px] border border-warmNeutral-200 bg-warmNeutral-0 p-6";
   let stats;
@@ -140,6 +147,11 @@ async function BookmarkStats() {
             </li>
           ))}
         </ul>
+      )}
+      {stats.total > 0 && (
+        <p className="mt-4 text-xs text-warmNeutral-500">
+          한 취미가 여러 대분류에 속하면 각 대분류에 함께 세어져서, 대분류별 합계가 전체보다 클 수 있어요.
+        </p>
       )}
     </section>
   );
