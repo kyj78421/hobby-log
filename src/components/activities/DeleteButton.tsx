@@ -17,14 +17,17 @@ function ConfirmButton() {
   );
 }
 
-export function DeleteButton({ id }: { id: string }) {
+export function DeleteButton({ id, className }: { id: string; className?: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
   return (
     <>
       <button
         type="button"
         onClick={() => dialog.current?.showModal()}
-        className="h-11 rounded-[14px] border border-error px-5 text-[15px] font-semibold text-error hover:bg-error-bg"
+        className={
+          className ??
+          "h-11 rounded-[14px] border border-error px-5 text-[15px] font-semibold text-error hover:bg-error-bg"
+        }
       >
         삭제하기
       </button>

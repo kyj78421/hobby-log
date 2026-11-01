@@ -44,6 +44,14 @@
 - **정리 완료(10/25)**: 사용자가 일반 브라우저에서 테스트 기록을 삭제 → DB 확인: 기록 2건(실제 기록만), Storage 객체 2개, 고아 객체 0, 사용자 1명. 앱의 삭제 흐름(기록 삭제 + 사진 파일 정리)이 Preview에서 정상 동작함(수동 확인)
 - Supabase Redirect URL 등록은 사용자 완료. Auth 설정 조회는 토큰 권한 부족(403)으로 확인 불가
 
+## 홈 화면 아이콘 + 그림일기형 상세 (11/02)
+- 원인: 아이콘이 create-next-app 기본 `favicon.ico` 하나뿐이고 apple-icon·manifest·appleWebApp 메타가 없어 iOS가 회색 기본 아이콘을 만들었음
+- 아이콘: 새싹(줄기+잎 2장+땅) 도형, 브랜드 #668568 배경. 파일: `src/app/apple-icon.png`(180×180, 불투명), `src/app/icon.png`(512), `src/app/favicon.ico`(16/32/48), `public/icons/icon-192.png`·`icon-512.png`·`icon-maskable-512.png`
+- 연결: `src/app/manifest.ts`(이름 HOBBY LOG, standalone, start_url `/`, theme #668568, bg #FAF9F6, any+maskable 아이콘), `layout.tsx` metadata(`appleWebApp`, applicationName, apple-mobile-web-app-capable) + `viewport`(themeColor, viewportFit cover). proxy matcher에서 manifest 제외
+- 주의: 이미 추가한 홈 화면 바로가기는 아이콘이 갱신되지 않음 → 삭제 후 Safari에서 다시 '홈 화면에 추가' 필요(새 앱 저장소라 한 번 다시 로그인)
+- 상세 화면(`/activities/[id]`): ①뒤로가기+수정/삭제 ②날짜+감정 ③가운데 제목 ④넓은 사진 칸(object-contain, 비율 유지) ⑤카테고리+만족도 ⑥본문(가운데 정렬, whitespace-pre-wrap로 줄바꿈·빈 줄 유지). 사진 없으면 🌱 안내 칸. DB 변경 없음
+- 테스트(로컬 빌드, 테스트 계정): 아이콘·manifest 응답/헤드 태그, 375px·1280px 상세(세로·가로 사진 비율 유지, 사진 없음, 여러 줄 본문), 수정(제목·사진 교체)·삭제(사진 정리) 회귀, 로그인 세션 유지
+
 ## 로그인 유지 개선 (11/02)
 - 요청: 아이폰 홈 화면 앱을 다시 열 때마다 로그인해야 함
 - 서버 확인(공개 Production, 테스트 계정): 세션 쿠키는 영구(400일, SameSite=Lax, 경로 /), 만료된 세션(2시간 경과 가정)으로 8개 요청을 동시에 보내도 모두 200·로그인 화면 이동 0건·갱신 토큰 정상 회전 → 서버 갱신 경로는 정상

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SessionKeeper } from "@/components/auth/SessionKeeper";
@@ -18,6 +18,18 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "HOBBY LOG",
   description: "좋아하는 순간을 기록하고, 나만의 취미 역사를 쌓다.",
+  applicationName: "HOBBY LOG",
+  // iOS 홈 화면에 추가했을 때의 이름과 독립 실행(standalone) 설정. 아이콘은 app/apple-icon.png가 자동 연결된다.
+  appleWebApp: { capable: true, title: "HOBBY LOG", statusBarStyle: "default" },
+  formatDetection: { telephone: false },
+  // 오래된 iOS 버전도 홈 화면 앱(standalone)으로 인식하도록 함께 지정한다.
+  other: { "apple-mobile-web-app-capable": "yes" },
+};
+
+// 브랜드 컬러(#668568)를 주소창·상태 표시줄 색으로 사용하고, 홈 인디케이터 영역까지 화면을 쓴다(하단 탭이 safe-area를 반영함).
+export const viewport: Viewport = {
+  themeColor: "#668568",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
