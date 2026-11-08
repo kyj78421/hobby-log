@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { HobbyPicker } from "@/components/HobbyPicker";
 import { getCategories, getMyHobbyIds } from "@/lib/activities";
-import { requireUser } from "@/lib/auth";
+import { requireUserWhile } from "@/lib/auth";
 
 export const metadata = { title: "관심 취미 · HOBBY LOG" };
 
@@ -20,14 +20,15 @@ export default function OnboardingPage() {
 }
 
 async function Picker() {
-  await requireUser("/onboarding");
-  let ids: number[] = [];
-  try {
-    ids = await getMyHobbyIds();
-  } catch {
-    // 불러오지 못해도 선택은 새로 할 수 있다.
-  }
-  const categories = await getCategories();
+  const loaded = await requireUserWhile(
+    "/onboarding",
+    Promise.all([
+      getMyHobbyIds().catch(() => [] as number[]), // 불러오지 못해도 선택은 새로 할 수 있다.
+      getCategories(),
+    ]),
+  );
+  if (loaded.status === "rejected") throw loaded.reason;
+  const [ids, categories] = loaded.value;
   return (
     <HobbyPicker categories={categories} initialSelected={ids} skipHref={ids.length ? "/mypage" : "/"} />
   );

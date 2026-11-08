@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ActivityCard } from "@/components/activities/ActivityCard";
 import { getCategories, getPhotoUrlMap, listActivities } from "@/lib/activities";
-import { requireUser } from "@/lib/auth";
+import { requireUserWhile } from "@/lib/auth";
 import { CardListSkeleton } from "@/components/Skeleton";
 import { FlashMessage } from "@/components/FlashMessage";
 
@@ -30,9 +30,9 @@ function href(category?: number, sort?: string) {
 
 async function Archive({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
-  await requireUser("/activities");
-
-  const categories = await getCategories();
+  const loadedCategories = await requireUserWhile("/activities", getCategories());
+  if (loadedCategories.status === "rejected") throw loadedCategories.reason;
+  const categories = loadedCategories.value;
   const categoryId = categories.find((c) => String(c.id) === sp.category)?.id;
   const sort = sp.sort === "asc" ? "asc" : "desc";
 

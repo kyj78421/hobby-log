@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { BookmarkExplorer } from "@/components/hobbies/BookmarkExplorer";
 import { BlockSkeleton } from "@/components/Skeleton";
 import { getCategories } from "@/lib/activities";
-import { requireUser } from "@/lib/auth";
+import { requireUserWhile } from "@/lib/auth";
 import { buildBookmarkStats, getMyBookmarkIds } from "@/lib/bookmarks";
 
 export const metadata = { title: "취미 북마크 · HOBBY LOG" };
@@ -26,12 +26,8 @@ export default function BookmarksPage() {
 }
 
 async function Manager() {
-  await requireUser("/bookmarks");
-  let ids: number[];
-  let categories;
-  try {
-    [ids, categories] = await Promise.all([getMyBookmarkIds(), getCategories()]);
-  } catch {
+  const loaded = await requireUserWhile("/bookmarks", Promise.all([getMyBookmarkIds(), getCategories()]));
+  if (loaded.status === "rejected") {
     return (
       <div role="alert" className="rounded-[12px] bg-error-bg px-4 py-4 text-error">
         <p>북마크를 불러오지 못했어요.</p>
@@ -41,6 +37,7 @@ async function Manager() {
       </div>
     );
   }
+  const [ids, categories] = loaded.value;
 
   const stats = buildBookmarkStats(categories, ids);
 

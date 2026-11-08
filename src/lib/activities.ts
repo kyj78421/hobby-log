@@ -1,4 +1,8 @@
+import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
+import { composeCategories, type CategoryRow, type OwnHobbyRow } from "@/lib/categories";
 import { PHOTO_BUCKET } from "@/lib/photos";
+import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 
 // own: 내가 직접 만든 취미 (RLS 덕분에 목록에는 기본 취미와 내 취미만 온다)
@@ -23,29 +27,39 @@ export const isUuid = (value: string) => UUID_PATTERN.test(value);
 const LIST_COLUMNS =
   "id, title, activity_date, emotion, satisfaction, photo_path, hobby:hobbies!inner(id, name, category:hobby_categories!hobbies_category_id_fkey!inner(id, name))";
 
-type LinkRow = {
-  sort_order: number;
-  hobby: { id: number; name: string; owner_id: string | null; archived_at: string | null };
-};
-
-// 대분류별 취미 목록. 한 취미가 여러 대분류에 연결되어 있으면 각 대분류에 모두 나온다.
-// 보관된 취미는 선택지에서 제외한다(기존 기록·표시는 영향 없음).
-export async function getCategories(): Promise<Category[]> {
-  const supabase = await createClient();
+// 기본(공개) 대분류·취미. 로그인과 무관하게 모든 사용자에게 같으므로 공유 캐시에 담는다.
+// 비회원 권한 클라이언트로 읽기 때문에 개인 취미는 절대 들어오지 않는다. 기본 취미는 마이그레이션으로만 바뀐다.
+async function getDefaultCategoryRows(): Promise<CategoryRow[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("default-categories");
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("hobby_categories")
     .select("id, name, links:hobby_category_links(sort_order, hobby:hobbies!inner(id, name, owner_id, archived_at))")
     .order("sort_order");
   if (error) throw new Error("카테고리를 불러오지 못했어요.");
-  return ((data ?? []) as unknown as { id: number; name: string; links: LinkRow[] }[]).map((c) => ({
-    id: c.id,
-    name: c.name,
-    hobbies: c.links
-      .filter((l) => l.hobby.archived_at === null)
-      .sort((a, b) => a.sort_order - b.sort_order || a.hobby.id - b.hobby.id)
-      .map((l) => ({ id: l.hobby.id, name: l.hobby.name, own: l.hobby.owner_id !== null })),
-  }));
+  return (data ?? []) as unknown as CategoryRow[];
 }
+
+// 내가 직접 만든 취미와 그 대분류 연결. 로그인 사용자별 데이터라 캐시하지 않고 요청마다 조회한다(RLS로 본인 것만 온다).
+async function getOwnHobbyRows(): Promise<OwnHobbyRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("hobbies")
+    .select("id, name, owner_id, archived_at, links:hobby_category_links(category_id, sort_order)")
+    .not("owner_id", "is", null);
+  if (error) throw new Error("카테고리를 불러오지 못했어요.");
+  return (data ?? []) as unknown as OwnHobbyRow[];
+}
+
+// 대분류별 취미 목록. 한 취미가 여러 대분류에 연결되어 있으면 각 대분류에 모두 나온다.
+// 보관된 취미는 선택지에서 제외한다(기존 기록·표시는 영향 없음).
+// 공개 부분(캐시)과 내 취미 부분(요청마다)을 동시에 읽고, 한 요청 안에서는 결과를 재사용한다.
+export const getCategories = cache(async (): Promise<Category[]> => {
+  const [defaults, own] = await Promise.all([getDefaultCategoryRows(), getOwnHobbyRows()]);
+  return composeCategories(defaults, own);
+});
 
 export type MyHobby = { id: number; name: string; categoryId: number; categoryName: string };
 

@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { DeleteButton } from "@/components/activities/DeleteButton";
 import { getEmotion } from "@/lib/emotions";
 import { formatDate, getActivity, getPhotoUrl } from "@/lib/activities";
-import { requireUser } from "@/lib/auth";
+import { requireUserWhile } from "@/lib/auth";
 import { BlockSkeleton } from "@/components/Skeleton";
 import { FlashMessage } from "@/components/FlashMessage";
 
@@ -34,9 +34,9 @@ const menuDelete =
 async function Detail({ params, searchParams }: Props) {
   const { id } = await params;
   const { error, saved } = await searchParams;
-  await requireUser(`/activities/${id}`);
-
-  const activity = await getActivity(id);
+  const loaded = await requireUserWhile(`/activities/${id}`, getActivity(id));
+  if (loaded.status === "rejected") throw loaded.reason;
+  const activity = loaded.value;
   if (!activity) notFound();
   const emotion = getEmotion(activity.emotion);
   const photoUrl = await getPhotoUrl(activity.photo_path);

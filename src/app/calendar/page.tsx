@@ -9,7 +9,7 @@ import {
   todayInSeoul,
   type ActivityListItem,
 } from "@/lib/activities";
-import { requireUser } from "@/lib/auth";
+import { requireUserWhile } from "@/lib/auth";
 import { BlockSkeleton } from "@/components/Skeleton";
 import { CalendarKeys } from "@/components/CalendarKeys";
 import { buildMonthGrid, isMonthString, monthLabel, monthRange, shiftMonth } from "@/lib/calendar";
@@ -33,8 +33,6 @@ export default function CalendarPage({ searchParams }: { searchParams: SearchPar
 
 async function Calendar({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
-  await requireUser("/calendar");
-
   const today = todayInSeoul();
   const selected = isDateString(sp.date) ? sp.date : null;
   const month = isMonthString(sp.month)
@@ -43,11 +41,12 @@ async function Calendar({ searchParams }: { searchParams: SearchParams }) {
       ? selected.slice(0, 7)
       : today.slice(0, 7);
 
-  let activities: ActivityListItem[];
-  try {
+  const load = (async () => {
     const { from, to } = monthRange(month);
-    activities = await listActivitiesBetween(from, to);
-  } catch {
+    return listActivitiesBetween(from, to);
+  })();
+  const loaded = await requireUserWhile("/calendar", load);
+  if (loaded.status === "rejected") {
     return (
       <div role="alert" className="rounded-[12px] bg-error-bg px-4 py-4 text-error">
         <p>기록을 불러오지 못했어요.</p>
@@ -57,6 +56,7 @@ async function Calendar({ searchParams }: { searchParams: SearchParams }) {
       </div>
     );
   }
+  const activities: ActivityListItem[] = loaded.value;
 
   const byDate = new Map<string, ActivityListItem[]>();
   for (const a of activities) byDate.set(a.activity_date, [...(byDate.get(a.activity_date) ?? []), a]);

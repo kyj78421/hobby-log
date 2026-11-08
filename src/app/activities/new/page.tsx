@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { createActivity } from "@/app/activities/actions";
 import { ActivityForm } from "@/components/activities/ActivityForm";
 import { getCategories, isDateString, todayInSeoul } from "@/lib/activities";
-import { requireUser } from "@/lib/auth";
+import { requireUserWhile } from "@/lib/auth";
 import { BlockSkeleton } from "@/components/Skeleton";
 
 export const metadata = { title: "기록하기 · HOBBY LOG" };
@@ -24,8 +24,9 @@ export default function NewActivityPage({
 
 async function NewForm({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const { date } = await searchParams;
-  await requireUser("/activities/new");
-  const categories = await getCategories();
+  const loaded = await requireUserWhile("/activities/new", getCategories());
+  if (loaded.status === "rejected") throw loaded.reason;
+  const categories = loaded.value;
   return (
     <ActivityForm
       action={createActivity}

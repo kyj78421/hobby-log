@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { MyHobbyManager } from "@/components/hobbies/MyHobbyManager";
 import { BlockSkeleton } from "@/components/Skeleton";
 import { getCategories, getMyCustomHobbies } from "@/lib/activities";
-import { requireUser } from "@/lib/auth";
+import { requireUserWhile } from "@/lib/auth";
 
 export const metadata = { title: "내가 만든 취미 · HOBBY LOG" };
 
@@ -25,11 +25,8 @@ export default function MyHobbiesPage() {
 }
 
 async function Manager() {
-  await requireUser("/my-hobbies");
-  let data;
-  try {
-    data = await Promise.all([getMyCustomHobbies(), getCategories()]);
-  } catch {
+  const loaded = await requireUserWhile("/my-hobbies", Promise.all([getMyCustomHobbies(), getCategories()]));
+  if (loaded.status === "rejected") {
     return (
       <div role="alert" className="rounded-[12px] bg-error-bg px-4 py-4 text-error">
         <p>내 취미를 불러오지 못했어요.</p>
@@ -39,5 +36,6 @@ async function Manager() {
       </div>
     );
   }
+  const data = loaded.value;
   return <MyHobbyManager hobbies={data[0]} categories={data[1]} />;
 }

@@ -4,7 +4,7 @@ import { BlockSkeleton } from "@/components/Skeleton";
 import Link from "next/link";
 import { countActivities, getCategories, getMyHobbyIds } from "@/lib/activities";
 import { buildBookmarkStats, getMyBookmarkIds } from "@/lib/bookmarks";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireUserWhile } from "@/lib/auth";
 
 export const metadata = { title: "마이페이지 · HOBBY LOG" };
 
@@ -20,22 +20,21 @@ export default function MyPage() {
 }
 
 async function Profile() {
-  const user = await requireUser("/mypage");
-  let hobbyNames: string[] | null = [];
-  try {
-    const [ids, categories] = await Promise.all([getMyHobbyIds(), getCategories()]);
+  // 로그인 확인·관심 취미·누적 기록 수는 서로 독립이라 동시에 조회한다. 각 조회의 실패 처리는 그대로다.
+  const loaded = await requireUserWhile(
+    "/mypage",
+    Promise.allSettled([Promise.all([getMyHobbyIds(), getCategories()]), countActivities()]),
+  );
+  const user = await requireUser("/mypage"); // 같은 요청 안에서 이미 확인한 결과를 재사용한다
+  const [hobbyResult, countResult] = loaded.status === "fulfilled" ? loaded.value : [];
+  let hobbyNames: string[] | null = null;
+  if (hobbyResult?.status === "fulfilled") {
+    const [ids, categories] = hobbyResult.value;
     // 한 취미가 여러 대분류에 있어도 한 번만 보여 준다.
     const byId = new Map(categories.flatMap((c) => c.hobbies).map((h) => [h.id, h.name]));
     hobbyNames = ids.filter((id) => byId.has(id)).map((id) => byId.get(id) as string);
-  } catch {
-    hobbyNames = null;
   }
-  let total: number | null = null;
-  try {
-    total = await countActivities();
-  } catch {
-    total = null;
-  }
+  const total: number | null = countResult?.status === "fulfilled" ? countResult.value : null;
 
   return (
     <div className="space-y-5">

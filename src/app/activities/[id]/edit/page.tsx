@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { updateActivity } from "@/app/activities/actions";
 import { ActivityForm } from "@/components/activities/ActivityForm";
 import { getActivity, getCategories, getPhotoUrl } from "@/lib/activities";
-import { requireUser } from "@/lib/auth";
+import { requireUserWhile } from "@/lib/auth";
 import { BlockSkeleton } from "@/components/Skeleton";
 
 export const metadata = { title: "기록 수정 · HOBBY LOG" };
@@ -21,9 +21,9 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
 
 async function EditForm({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  await requireUser(`/activities/${id}/edit`);
-
-  const [activity, categories] = await Promise.all([getActivity(id), getCategories()]);
+  const loaded = await requireUserWhile(`/activities/${id}/edit`, Promise.all([getActivity(id), getCategories()]));
+  if (loaded.status === "rejected") throw loaded.reason;
+  const [activity, categories] = loaded.value;
   if (!activity) notFound();
   const photoUrl = await getPhotoUrl(activity.photo_path);
 
